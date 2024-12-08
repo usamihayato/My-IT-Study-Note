@@ -2,11 +2,11 @@ import logging
 import logging.config
 import yaml
 
-def setup_logging(config_path):
+def setup_logging():
     """
     ログの設定を行う。
     """
-    with open(config_path, 'r') as f:
+    with open('input/config/logging_config.yml', 'r') as f:
         config = yaml.safe_load(f.read())
         logging.config.dictConfig(config)
 

@@ -34,36 +34,38 @@ project_root/
 ├── src/                         # ソースコード
 │   └── app/
 │       ├── __init__.py
-│       ├── main.py             # メインスクリプト
+│       ├── main.py              # メインスクリプト
 │       │
-│       ├── core/               # コア機能
+│       ├── core/                # コア機能
 │       │   ├── __init__.py
-│       │   ├── config.py       # 設定読み込み
-│       │   └── logger.py       # ログ設定
+│       │   ├── config.py        # 設定読み込み
+│       │   └── logger.py        # ログ設定
 │       │
-│       ├── api/                # API関連
+│       ├── api/                 # API関連
 │       │   ├── __init__.py
-│       │   └── client.py       # APIクライアント
+│       │   └── client.py        # APIクライアント
 │       │
-│       └── utils/              # ユーティリティ
+│       └── utils/               # ユーティリティ
 │           ├── __init__.py
-│           └── file_handler.py # ファイル保存処理
+│           └── file_handler.py  # ファイル保存処理
 │
-├── config/                     # 設定ファイル
-│   ├── connection_config.yml   # API接続設定
-│   ├── data_config.yml        # データ保存設定
-│   └── logging_config.yml     # ログ設定
+├── input/                       # 入力ファイル
+│   ├── config/                  # 設定ファイル
+│   │   ├── connection_config.yml    # API接続設定
+│   │   ├── data_config.yml          # データ保存設定
+│   │   └── logging_config.yml       # ログ設定
+│   │
+│   └── data/                    # データファイル
+│       └── symbols.csv          # 銘柄マスタ
 │
-├── data/                      # データファイル
-│   ├── symbols.csv            # 銘柄マスタ
-│   └── output/                # API取得データの保存先
+├── output/                      # 出力ファイル
+│   ├── logs/                    # ログファイル
+│   │   └── .gitkeep
+│   └── extracted_data/          # API取得データの保存先
 │       └── .gitkeep
 │
-├── logs/                      # ログファイル
-│   └── .gitkeep
-│
-└── tests/                     # テスト
+└── tests/                       # テスト
     ├── __init__.py
-    ├── conftest.py            # テスト設定
-    └── test_api/              # APIテスト
+    ├── conftest.py              # テスト設定
+    └── test_api/                # APIテスト
 ```

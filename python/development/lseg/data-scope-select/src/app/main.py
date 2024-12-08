@@ -7,7 +7,7 @@ from app.core.logger import setup_logging, get_logger
 from app.core.logger import logger
 from app.utils.file_handler import save_extracted_file
 
-setup_logging('input/config/logging_config.yml')
+setup_logging()
 logger = get_logger(__name__)
 
 def main():

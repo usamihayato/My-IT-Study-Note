@@ -1,10 +1,22 @@
 api:
-  base_url: "https://api.example.com/v1"
-  username: "your_username"
-  password: "your_password"
-  timeout: 30
-  max_retries: 3
-  headers:
-    Content-Type: "application/json; odata.metadata=minimal"
-    Accept: "application/json"
-    X-Direct-Download: "true"
+  base_url: https://your-datascope-select-url
+  username: your-username
+  password: your-password
+use_proxy: false  # プロキシを使用するかどうかのフラグ
+proxies:  # プロキシ設定（use_proxy: trueの場合のみ使用）
+  http: http://proxy-url:port
+  https: https://proxy-url:port
+verify_ssl: true
+headers:
+  Content-Type: application/json; odata.metadata=minimal
+  Accept-Encoding: gzip, deflate
+  X-Direct-Download: true
+  Prefer: respond-async  # 長時間実行される可能性がある要求の場合
+retry:
+  max_attempts: 3
+  backoff_factor: 1
+  status_forcelist: [502, 503, 504]  # 501以下は除外
+  max_retries_per_minute: 3  # 1分あたりの最大リトライ回数
+polling:
+  recommended_interval: 30  # 推奨ポーリング間隔（秒）
+  max_interval: 60  # 最大ポーリング間隔（秒）
