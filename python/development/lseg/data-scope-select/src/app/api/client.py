@@ -1,6 +1,6 @@
 import os
 import requests
-from typing import List, Dict
+from typing import List, Dict, Optional
 from app.core.config import get_connection_config
 from app.core.logger import logger
 
@@ -8,7 +8,7 @@ class DataScopeClient:
     def __init__(self):
         self.config = get_connection_config()
         self.base_url = self.config['base_url']
-        self.headers = {'Content-Type': 'application/json; odata.metadata=minimal'}
+        self.header = {'Content-Type': 'application/json; odata.metadata=minimal', 'X-Direct-Download': 'true'}
         self.token = None
 
     def get_auth_token(self) -> str:
@@ -34,6 +34,17 @@ class DataScopeClient:
         response = requests.post(f"{self.base_url}/Extractions/InstrumentLists", json=instrument_list_data, headers=self.headers)
         response.raise_for_status()
         return response.json()['ListId']
+    
+    def get_instrument_list_id(self, name: str) -> Optional[str]:
+        """
+        指定された名前の銘柄リストのIDを取得する。存在しない場合はNoneを返す。
+        """
+        response = requests.get(f"{self.base_url}/Extractions/InstrumentLists", headers=self.headers)
+        response.raise_for_status()
+        for item in response.json()['value']:
+            if item['Name'] == name:
+                return item['ListId']
+        return None
 
     def append_instruments(self, list_id: str, instruments: List[str]) -> None:
         """
@@ -60,8 +71,19 @@ class DataScopeClient:
         response = requests.post(f"{self.base_url}/Extractions/ReportTemplates", json=report_data, headers=self.headers)
         response.raise_for_status()
         return response.json()['ReportTemplateId']
+        
+    def get_report_template_id(self, name: str) -> Optional[str]:
+        """
+        指定された名前のレポートテンプレートのIDを取得する。存在しない場合はNoneを返す。
+        """
+        response = requests.get(f"{self.base_url}/Extractions/ReportTemplates", headers=self.headers)
+        response.raise_for_status()
+        for item in response.json()['value']:
+            if item['Name'] == name:
+                return item['ReportTemplateId']
+        return None
 
-    def create_schedule_extraction(self, list_id: str, report_template_id: str, extraction_type: str, start_date: str = None, end_date: str = None) -> str:
+    def create_schedule(self, list_id: str, report_template_id: str, extraction_type: str, start_date: str = None, end_date: str = None) -> str:
         """
         データ抽出スケジュールを作成する。
         指定された銘柄リストIDとレポートテンプレートIDを使用して、データ抽出スケジュールを作成し、作成されたスケジュールのIDを返す。
@@ -107,6 +129,37 @@ class DataScopeClient:
         response.raise_for_status()
         return response.json()['ScheduleId']
 
+    def get_schedule_id(self, name: str) -> Optional[str]:
+        """
+        指定された名前のスケジュールのIDを取得する。存在しない場合はNoneを返す。
+        """
+        response = requests.get(f"{self.base_url}/Extractions/Schedules", headers=self.headers)
+        response.raise_for_status()
+        for item in response.json()['value']:
+            if item['Name'] == name:
+                return item['ScheduleId']
+        return None
+    
+    def get_instruments_in_list(self, list_id: str) -> List[str]:
+        """
+        指定された銘柄リストに含まれる銘柄を取得する。
+        """
+        response = requests.get(f"{self.base_url}/Extractions/InstrumentLists('{list_id}')/Identifiers", headers=self.headers)
+        response.raise_for_status()
+        return [item['Identifier'] for item in response.json()['value']]
+
+    def update_schedule_trigger(self, schedule_id: str) -> None:
+        """
+        指定されたスケジュールのトリガー時刻を現在の日付に更新する。
+        """
+        schedule_data = {
+            "Trigger": {
+                "@odata.type": "#DataScope.Select.Api.Extractions.Schedules.DataAvailabilityTrigger",
+                "LimitReportToTodaysData": True
+            }
+        }
+        response = requests.patch(f"{self.base_url}/Extractions/Schedules('{schedule_id}')", json=schedule_data, headers=self.headers)
+        response.raise_for_status()
 
     def get_extraction_status(self, schedule_id: str) -> Dict:
         """
@@ -116,7 +169,6 @@ class DataScopeClient:
         response = requests.get(f"{self.base_url}/Extractions/Schedules('{schedule_id}')/LastExtraction", headers=self.headers)
         response.raise_for_status()
         return response.json()
-
 
     def download_extracted_file(self, file_id: str, output_path: str) -> None:
         """
