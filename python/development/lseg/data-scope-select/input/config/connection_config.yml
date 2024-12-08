@@ -1,0 +1,10 @@
+api:
+  base_url: "https://api.example.com/v1"
+  username: "your_username"
+  password: "your_password"
+  timeout: 30
+  max_retries: 3
+  headers:
+    Content-Type: "application/json; odata.metadata=minimal"
+    Accept: "application/json"
+    X-Direct-Download: "true"

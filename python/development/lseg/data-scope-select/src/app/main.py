@@ -3,8 +3,12 @@ import sys
 import requests
 from app.api.client import DataScopeClient
 from app.core.config import get_data_config
+from app.core.logger import setup_logging, get_logger
 from app.core.logger import logger
 from app.utils.file_handler import save_extracted_file
+
+setup_logging('input/config/logging_config.yml')
+logger = get_logger(__name__)
 
 def main():
     client = DataScopeClient()
