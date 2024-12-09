@@ -1,23 +1,47 @@
-import os
+import argparse
 from datetime import datetime
-import logging.config
-import yaml
-from app.core.logger import setup_logging, get_logger
 from app.api.client import QuickApiClient
+from app.services.data_collector import DataCollector
+from app.core.logger import setup_logging, get_logger
+
 
 def main():
-    # ログ設定の読み込み
     setup_logging()
     logger = get_logger(__name__)
 
+    parser = argparse.ArgumentParser(description='Quick APIデータ収集ツール')
+    parser.add_argument(
+        '--mode',
+        choices=['daily', 'spot'],
+        default='daily',
+        help='実行モード（daily: 日次実行, spot: スポット実行）'
+    )
+    parser.add_argument(
+        '--date',
+        help='スポット実行時の定義日付（YYYYMMDD形式）'
+    )
+
+    args = parser.parse_args()
+
     try:
-        # クライアントの初期化
-        client = QuickApiClient(output_dir="output/data")
-        logger.info("QuickApiClientの初期化が完了しました")
-        
-        # quote_indexデータの取得
-        filepath, _ = client.request_data('quote_index')
-        logger.info(f"データを保存しました: {filepath}")
+        client = QuickApiClient()
+        collector = DataCollector(client)
+
+        if args.mode == 'daily':
+            logger.info("日次データ収集を開始します")
+            results = collector.execute_daily_requests()
+            collector.create_execution_report(mode='daily')
+        else:
+            if not args.date:
+                raise ValueError("スポット実行には日付の指定が必要です（--date YYYYMMDD）")
+            logger.info(f"スポットリクエスト（{args.date}）を実行します")
+            results = collector.execute_spot_requests(args.date)
+            collector.create_execution_report(mode='spot', date=args.date)
+
+        # 結果のサマリーを表示
+        success_count = len(results["success"])
+        failure_count = len(results["failure"])
+        logger.info(f"データ収集が完了しました（成功: {success_count}, 失敗: {failure_count}）")
 
     except Exception as e:
         logger.error(f"エラーが発生しました: {str(e)}", exc_info=True)
