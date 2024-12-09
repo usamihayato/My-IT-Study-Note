@@ -1,0 +1,6 @@
+# 日次データ取得定義
+requests:
+  # 指標データ
+  index:
+    enabled: true
+    description: "各種指標の日次データ取得"
