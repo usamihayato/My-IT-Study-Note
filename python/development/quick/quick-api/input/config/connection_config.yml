@@ -1,7 +1,7 @@
 # API基本設定
 api:
   base_url: "https://staging.api.quick-co.jp/octpath/v1/api"
-  access_key: "6113f85c9258d656170afad0d48682448940b34354fac469e3cdc440a886516c"
+  access_key: "xxxxx"
   timeout: 30
   format: "csv" 
 
