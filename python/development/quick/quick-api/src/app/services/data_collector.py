@@ -56,6 +56,8 @@ class DataCollector:
             except Exception as e:
                 logger.error(f"{name}の取得に失敗しました: {e}")
                 self.results["failure"].append(name)
+            else:
+                self.results["success"].append(name)
 
         return self.results
 
@@ -78,8 +80,10 @@ class DataCollector:
             try:
                 self._execute_request(name, config, base_dir)
             except Exception as e:
-                logger.error(f"{name}の実行に失敗しました: {e}")
+                logger.error(f"{name}の取得に失敗しました: {e}")
                 self.results["failure"].append(name)
+            else:
+                self.results["success"].append(name)
 
         return self.results
 
