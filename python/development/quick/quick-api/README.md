@@ -76,6 +76,26 @@ conda activate quick-api
 # 必要なパッケージのインストール
 conda install pyyaml requests urllib3
 ```
+#### PYTHONPATH の設定
+
+##### conda環境での設定（推奨）
+
+conda環境で恒久的にPYTHONPATHを設定する場合：
+
+1. conda環境のsite-packagesディレクトリにpth文件を作成
+
+```bash
+# conda環境のsite-packagesディレクトリを確認
+python -c "import site; print(site.getsitepackages()[0])"
+```
+
+2. 表示されたパスに `quick-api.pth` ファイルを作成
+例：`<表示されたパス>\Lib\site-packages\quick-api.pth`
+
+3. pthファイルに以下の内容を記載（プロジェクトの絶対パスを指定）
+```
+C:\<rootpath>\src
+```
 
 ## 設定
 
