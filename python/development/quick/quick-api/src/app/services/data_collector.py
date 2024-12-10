@@ -5,7 +5,9 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from pathlib import Path
 from app.api.client import QuickApiClient
+from app.core.config import get_input_path, get_output_path
 from app.core.logger import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -32,7 +34,8 @@ class DataCollector:
         """日次データ収集を実行"""
         logger.info("日次データ収集を開始します")
         
-        daily_def_path = "input/daily/requests.yml"
+        execution_date = datetime.now().strftime("%Y%m%d")
+        daily_def_path = get_input_path('daily')
         if not os.path.exists(daily_def_path):
             raise FileNotFoundError(f"日次定義ファイルが見つかりません: {daily_def_path}")
             
@@ -40,8 +43,7 @@ class DataCollector:
         requests = definition.get('requests', {})
         
         # 出力ディレクトリを daily/YYYYMMDD/data 配下に設定
-        execution_date = datetime.now().strftime("%Y%m%d")
-        base_dir = os.path.join("output/daily", execution_date, "data")
+        base_dir = get_output_path('daily', execution_date)
         
         for name, config in requests.items():
             if not config.get('enabled', True):
@@ -61,7 +63,7 @@ class DataCollector:
         """スポットリクエストを実行"""
         logger.info(f"スポットリクエスト（{target_date}）を開始します")
         
-        spot_def_path = f"input/spot/{target_date}/requests.yml"
+        spot_def_path = get_input_path('spot', target_date)
         if not os.path.exists(spot_def_path):
             raise FileNotFoundError(f"スポット定義ファイルが見つかりません: {spot_def_path}")
             
@@ -69,7 +71,7 @@ class DataCollector:
         requests = definition.get('requests', {})
         
         # 出力ディレクトリを spot/YYYYMMDD/data 配下に設定
-        base_dir = os.path.join("output/spot", target_date, "data")
+        base_dir = get_output_path('spot', target_date)
         
         for name, config in requests.items():
             logger.info(f"{config['description']}を開始します")
