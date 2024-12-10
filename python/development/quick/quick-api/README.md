@@ -63,6 +63,8 @@ project_root/
   - pyyaml
   - requests
   - urllib3
+  - pytest (テスト実行用)
+  - pytest-cov (カバレッジレポート用)
 
 ### インストール
 
@@ -75,6 +77,7 @@ conda activate quick-api
 
 # 必要なパッケージのインストール
 conda install pyyaml requests urllib3
+pip install pytest pytest-cov
 ```
 #### PYTHONPATH の設定
 
@@ -166,6 +169,77 @@ python src/app/main.py --mode spot --date 20231208
 - 保存場所:
   - 日次実行: `output/daily/YYYYMMDD/reports/`
   - スポット実行: `output/spot/YYYYMMDD/reports/`
+
+### ログファイル
+
+- アプリケーションログ: `output/logs/quick_api.log`
+- エラーログ: `output/logs/quick_api_error.log`
+
+## テスト実行
+### ユニットテスト
+
+```bash
+# プロジェクトルートで実行
+pytest
+
+# 詳細な出力を表示
+pytest -v
+
+# 特定のテストファイルを実行
+pytest tests/test_api/test_client.py
+
+# 特定のテストクラスを実行
+pytest tests/test_api/test_client.py::TestQuickApiClient
+
+# 特定のテストメソッドを実行
+pytest tests/test_api/test_client.py::TestQuickApiClient::test_init_client
+```
+
+### カバレッジレポート作成
+
+```bash
+
+# カバレッジレポートを生成
+pytest --cov=app tests/
+
+# HTMLレポートを生成
+pytest --cov=app --cov-report=html tests/
+# report/htmlディレクトリにレポートが生成されます
+
+```
+
+
+### テストディレクトリ構成
+
+- `tests/`: テストコードのルートディレクトリ
+  - `conftest.py`: pytest共通設定、フィクスチャ定義
+  - `test_api/`: APIクライアント関連のテスト
+  - `test_core/`: コア機能のテスト
+  - `test_services/`: サービス層のテスト
+
+### テスト実行時の注意点
+
+- テストデータは `output/test` ディレクトリに出力されます
+- テスト実行後、テストで生成されたデータは自動的にクリーンアップされます
+- 本番の設定ファイルやデータには影響を与えません
+
+## 出力ファイル
+
+### データファイル
+
+- 形式: `{endpoint}_{YYYYMMDD_HHMMSS}.csv`
+- 保存場所:
+  - 日次実行: `output/daily/YYYYMMDD/data/`
+  - スポット実行: `output/spot/YYYYMMDD/data/`
+  - テスト実行: `output/test/YYYYMMDD/data/`
+
+### 実行レポート
+
+- 形式: `execution_report_{YYYYMMDD_HHMMSS}.txt`
+- 保存場所:
+  - 日次実行: `output/daily/YYYYMMDD/reports/`
+  - スポット実行: `output/spot/YYYYMMDD/reports/`
+  - テスト実行: `output/test/YYYYMMDD/reports/`
 
 ### ログファイル
 
