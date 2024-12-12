@@ -10,11 +10,11 @@ metadata:
   name: batch-job-creator
   namespace: openapi-server
 ---
+# クラスター全体で一つのClusterRole定義
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: job-manager
-  namespace: openapi-app
 rules:
 - apiGroups: ["batch"]
   resources: ["jobs"]
@@ -30,7 +30,7 @@ subjects:
   name: batch-job-creator
   namespace: openapi-server
 roleRef:
-  kind: Role
+  kind: ClusterRole
   name: job-manager
   apiGroup: rbac.authorization.k8s.io
 ---
