@@ -45,20 +45,33 @@ def override_if_exists(params:dict, key:str ,default:Any):
 
 
 def create_container_object(params):
-    job_name=override_if_exists(params, "job_name", JOB_NAME)
-    image=override_if_exists(params, "image", CONTAINER_IMAGE)
-    container_image_pull_policy=override_if_exists(params, "container_image_pull_policy", CONTAINER_IMAGE_PULL_POLICY)
-    container_requests_cpu=override_if_exists(params, "container_requests_cpu", CONTAINER_REQUESTS_CPU)
-    container_requests_memory=override_if_exists(params, "container_requests_memory", CONTAINER_REQUESTS_MEMORY)
-    container_limits_cpu=override_if_exists(params, "container_limits_cpu", CONTAINER_LIMITS_CPU)
-    container_limits_memory=override_if_exists(params, "container_limits_memory", CONTAINER_LIMITS_MEMORY)
-    container_volume_mount_input_name=override_if_exists(params, "container_volume_mount_input_name", CONTAINER_VOLUME_MOUNT_INPUT_NAME)
-    container_volume_mount_input_path=override_if_exists(params, "container_volume_mount_input_path", CONTAINER_VOLUME_MOUNT_INPUT_PATH)
-    container_volume_mount_output_name=override_if_exists(params, "container_volume_mount_output_name", CONTAINER_VOLUME_MOUNT_OUTPUT_NAME)
-    container_volume_mount_output_path=override_if_exists(params, "container_volume_mount_output_path", CONTAINER_VOLUME_MOUNT_OUTPUT_PATH)
+    # 基本パラメータ
+    job_name = override_if_exists(params, "job_name", JOB_NAME)
+    image = override_if_exists(params, "image", CONTAINER_IMAGE)
+    container_image_pull_policy = override_if_exists(params, "container_image_pull_policy", CONTAINER_IMAGE_PULL_POLICY)
+    
+    # リソース制限パラメータ
+    container_requests_cpu = override_if_exists(params, "container_requests_cpu", CONTAINER_REQUESTS_CPU)
+    container_requests_memory = override_if_exists(params, "container_requests_memory", CONTAINER_REQUESTS_MEMORY)
+    container_limits_cpu = override_if_exists(params, "container_limits_cpu", CONTAINER_LIMITS_CPU)
+    container_limits_memory = override_if_exists(params, "container_limits_memory", CONTAINER_LIMITS_MEMORY)
 
+    # マウント設定の取得
+    mount_config = params.get('mount_config', {})
+    
+    # ボリューム名とマウントパスの設定
+    container_volume_mount_input_name = override_if_exists(params, "container_volume_mount_input_name", CONTAINER_VOLUME_MOUNT_INPUT_NAME)
+    container_volume_mount_output_name = override_if_exists(params, "container_volume_mount_output_name", CONTAINER_VOLUME_MOUNT_OUTPUT_NAME)
+    
+    # マウントパスの設定（新しい設定 > パラメータ指定 > デフォルト値）
+    container_volume_mount_input_path = mount_config.get('input_path', 
+        override_if_exists(params, "container_volume_mount_input_path", CONTAINER_VOLUME_MOUNT_INPUT_PATH))
+    container_volume_mount_output_path = mount_config.get('output_path',
+        override_if_exists(params, "container_volume_mount_output_path", CONTAINER_VOLUME_MOUNT_OUTPUT_PATH))
+
+    # コンテナオブジェクトの作成
     container = client.V1Container(
-        command=["sh", "scripts/run.sh"], # ExaWizards コンテナ の仕様に依存
+        command=["sh", "scripts/run.sh"],  # ExaWizards コンテナの仕様に依存
         name=job_name,
         image=image,
         image_pull_policy=container_image_pull_policy,
@@ -175,15 +188,34 @@ def create_job(params):
     # api_versionはbatch/v1のみ使用
     batch_v1_api = client.BatchV1Api()
     job_obj = _create_job_object(params)
-
+    
     try:
+        # まず既存のジョブを削除を試みる
+        try:
+            batch_v1_api.delete_namespaced_job(
+                name=job_obj.metadata.name,
+                namespace=job_obj.metadata.namespace,
+                body=client.V1DeleteOptions(
+                    propagation_policy='Background'
+                )
+            )
+            # ジョブが完全に削除されるまで待機
+            import time
+            time.sleep(2)  # 必要に応じて調整
+        except ApiException as e:
+            if e.status != 404:  # 404（Not Found）以外のエラーは報告
+                logger.warning(f"Error during job cleanup: {e}")
+            # 404の場合は無視（ジョブが存在しないのは問題ない）
+
+        # 新しいジョブを作成
         v1_job = batch_v1_api.create_namespaced_job(
             body=job_obj,
             namespace=job_obj.metadata.namespace)
     except ApiException as e:
-        raise K8sOperationFailedException("[create_namespaced_job] couldn't crate job: %s\n" )
+        logger.error(f"Error creating job: {str(e)}")
+        raise K8sOperationFailedException(f"[create_namespaced_job] couldn't create job: {str(e)}")
     else:
-        logger.info("Job created. status='%s'" % str(v1_job.status))
+        logger.info(f"Job created. status='{str(v1_job.status)}'")
 
 
 def get_job_status(params):
