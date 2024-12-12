@@ -16,6 +16,8 @@ CONTAINER_VOLUME_MOUNT_OUTPUT_NAME="batch-output"
 CONTAINER_VOLUME_MOUNT_OUTPUT_PATH="/app/output"
 CONTAINER_IMAGE="acrprivateprdje001.azurecr.io/nikko_batch:0.1.1"
 CONTAINER_IMAGE_PULL_POLICY="Always"
+CONTAINER_COMMAND_TYPE = "sh"  # デフォルトは"sh"
+CONTAINER_COMMAND_PATH = "scripts/run.sh"  # デフォルトパス
 
 POD_NAME="ai-analysis"
 POD_NAMESPACE="openapi-app"
@@ -49,7 +51,21 @@ def create_container_object(params):
     job_name = override_if_exists(params, "job_name", JOB_NAME)
     image = override_if_exists(params, "image", CONTAINER_IMAGE)
     container_image_pull_policy = override_if_exists(params, "container_image_pull_policy", CONTAINER_IMAGE_PULL_POLICY)
-    
+
+    # コマンド設定の取得
+    command_config = params.get('command_config', {})
+    command_type = command_config.get('type', CONTAINER_COMMAND_TYPE)
+    command_path = command_config.get('path', CONTAINER_COMMAND_PATH)
+    command_args = command_config.get('args', [])
+
+    # コマンドの組み立て
+    if command_type == "python":
+        container_command = ["python", command_path] + command_args
+    elif command_type == "sh":
+        container_command = ["sh", command_path] + command_args
+    else:
+        container_command = [command_type, command_path] + command_args
+
     # リソース制限パラメータ
     container_requests_cpu = override_if_exists(params, "container_requests_cpu", CONTAINER_REQUESTS_CPU)
     container_requests_memory = override_if_exists(params, "container_requests_memory", CONTAINER_REQUESTS_MEMORY)
@@ -71,7 +87,7 @@ def create_container_object(params):
 
     # コンテナオブジェクトの作成
     container = client.V1Container(
-        command=["sh", "scripts/run.sh"],  # ExaWizards コンテナの仕様に依存
+        command=container_command,  # 動的に設定されたコマンド
         name=job_name,
         image=image,
         image_pull_policy=container_image_pull_policy,

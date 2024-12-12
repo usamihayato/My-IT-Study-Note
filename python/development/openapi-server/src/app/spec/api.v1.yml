@@ -123,6 +123,25 @@ components:
       properties:
         job_name:
           type: string
+        command_config:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [python, sh, bash]
+              description: Command type to execute
+            path:
+              type: string
+              description: Path to the script or file to execute
+            args:
+              type: array
+              items:
+                type: string
+              description: Additional arguments for the command
+          example:
+            type: "python"
+            path: "scripts/process.py"
+            args: ["--input-dir", "/app/data"]
         mount_config:
           type: object
           properties:
