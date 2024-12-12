@@ -1,0 +1,10 @@
+# Dockerfile.test-job
+FROM python:3.8-slim
+
+WORKDIR /app
+RUN mkdir -p /app/scripts
+COPY scripts/run.sh /app/scripts/
+
+RUN chmod +x /app/scripts/run.sh
+
+CMD ["sh", "/app/scripts/run.sh"]
