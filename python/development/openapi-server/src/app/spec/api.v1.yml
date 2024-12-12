@@ -123,6 +123,10 @@ components:
       properties:
         job_name:
           type: string
+        namespace:
+          type: string
+          description: Kubernetes namespace for the job
+          example: "custom-namespace"
         command_config:
           type: object
           properties:

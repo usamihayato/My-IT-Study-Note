@@ -117,6 +117,9 @@ def create_container_object(params):
 
 
 def create_pod_template_object(params):
+    # namespaceの取得（新規追加）
+    pod_namespace = params.get('namespace', POD_NAMESPACE)
+
     # 基本パラメータ
     job_name = override_if_exists(params, "job_name", JOB_NAME)
     pod_name = override_if_exists(params, "pod_name", POD_NAME)
@@ -180,21 +183,26 @@ def create_pod_template_object(params):
 
 
 def _create_job_object(params):
-    job_name=override_if_exists(params, "job_name", JOB_NAME)
-    job_namespace=JOB_NAMESPACE # pvcとsecretがJOB_NAMESPACEで作成されているため固定
-    job_ttl_second_after_finished=override_if_exists(params, "job_ttl_second_after_finished", JOB_TTL_SECOND_AFTER_FINISHED)
-    job_backoff_limit=override_if_exists(params, "job_backoff_limit", JOB_BACKOFF_LIMIT)
+    # namespaceの取得（新規追加）
+    job_namespace = params.get('namespace', JOB_NAMESPACE)
+    
+    job_name = override_if_exists(params, "job_name", JOB_NAME)
+    job_ttl_second_after_finished = override_if_exists(params, "job_ttl_second_after_finished", JOB_TTL_SECOND_AFTER_FINISHED)
+    job_backoff_limit = override_if_exists(params, "job_backoff_limit", JOB_BACKOFF_LIMIT)
 
     spec = client.V1JobSpec(
         ttl_seconds_after_finished=job_ttl_second_after_finished,
-        template=create_pod_template_object(params),
+        template=create_pod_template_object(params),  # paramsにnamespaceが含まれる
         backoff_limit=job_backoff_limit)
 
     # api_versionはbatch/v1のみ使用
     job = client.V1Job(
         api_version=API_VERSION,
         kind="Job",
-        metadata=client.V1ObjectMeta(name=job_name, namespace=job_namespace),
+        metadata=client.V1ObjectMeta(
+            name=job_name, 
+            namespace=job_namespace  # 動的なnamespace
+        ),
         spec=spec)
 
     return job
@@ -235,8 +243,8 @@ def create_job(params):
 
 
 def get_job_status(params):
-    job_name=override_if_exists(params, "job_name", JOB_NAME)
-    job_namespace=JOB_NAMESPACE # pvcとsecretが JOB_NAMESPACE で作成されているため固定
+    job_name = override_if_exists(params, "job_name", JOB_NAME)
+    job_namespace = params.get('namespace', JOB_NAMESPACE)  # namespaceの取得（新規追加）
     request_timeout = override_if_exists(params, 'request_timeout', READ_REQUEST_TIMEOUT)
 
     # api_versionはbatch/v1のみ使用
