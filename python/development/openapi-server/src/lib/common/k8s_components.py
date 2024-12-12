@@ -88,14 +88,35 @@ def create_container_object(params):
 
 
 def create_pod_template_object(params):
-    job_name=override_if_exists(params, "job_name", JOB_NAME)
-    pod_name=override_if_exists(params, "pod_name", POD_NAME)
-    pod_namespace=POD_NAMESPACE # pvc と secret が JOB_NAMESPACE で作成されているため固定
-    pod_restart_policy=override_if_exists(params, "pod_restart_policy", POD_RESTART_POLICY)
-    pod_volume_input_name=override_if_exists(params, "pod_volume_input_name", POD_VOLUME_INPUT_NAME)
-    pod_volume_input_claim_name=override_if_exists(params, "pod_volume_input_claim_name", POD_VOLUME_INPUT_CLAIM_NAME)
-    pod_volume_output_name=override_if_exists(params, "pod_volume_output_name", POD_VOLUME_OUTPUT_NAME)
-    pod_volume_output_claim_name=override_if_exists(params, "pod_volume_output_claim_name", POD_VOLUME_OUTPUT_CLAIM_NAME)
+    # 基本パラメータ
+    job_name = override_if_exists(params, "job_name", JOB_NAME)
+    pod_name = override_if_exists(params, "pod_name", POD_NAME)
+    pod_namespace = POD_NAMESPACE  # pvc と secret が JOB_NAMESPACE で作成されているため固定
+    pod_restart_policy = override_if_exists(params, "pod_restart_policy", POD_RESTART_POLICY)
+    
+    # ボリューム関連の設定
+    mount_config = params.get('mount_config', {})
+    storage_config = mount_config.get('storage_config', {})
+    
+    # 入力ボリューム設定
+    pod_volume_input_name = override_if_exists(params, "pod_volume_input_name", POD_VOLUME_INPUT_NAME)
+    pod_volume_input_claim_name = storage_config.get('input_claim_name', 
+        override_if_exists(params, "pod_volume_input_claim_name", POD_VOLUME_INPUT_CLAIM_NAME))
+    
+    # 出力ボリューム設定
+    pod_volume_output_name = override_if_exists(params, "pod_volume_output_name", POD_VOLUME_OUTPUT_NAME)
+    pod_volume_output_claim_name = storage_config.get('output_claim_name',
+        override_if_exists(params, "pod_volume_output_claim_name", POD_VOLUME_OUTPUT_CLAIM_NAME))
+    
+    # DNS設定
+    dns_config = params.get('dns_config')
+    pod_dns_config = None
+    if dns_config:
+        pod_dns_config = client.V1PodDNSConfig(**dns_config)
+
+    # コンテナにマウントパス情報を渡すために params を更新
+    if mount_config:
+        params['mount_config'] = mount_config
 
     template = client.V1PodTemplateSpec(
         metadata=client.V1ObjectMeta(
@@ -103,10 +124,11 @@ def create_pod_template_object(params):
             namespace=pod_namespace,
             labels={
                 "app": job_name,
-                }
-            ),
+            }
+        ),
         spec=client.V1PodSpec(
             restart_policy=pod_restart_policy,
+            dns_config=pod_dns_config,  # DNS設定を追加
             containers=[create_container_object(params)],
             volumes=[
                 client.V1Volume(
@@ -122,7 +144,7 @@ def create_pod_template_object(params):
                     )
                 ),
             ]
-         )
+        )
     )
 
     return template

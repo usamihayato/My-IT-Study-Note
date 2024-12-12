@@ -123,6 +123,46 @@ components:
       properties:
         job_name:
           type: string
+        mount_config:
+          type: object
+          properties:
+            input_path:
+              type: string
+              description: Custom input mount path
+              example: "/custom/input/path"
+            output_path:
+              type: string
+              description: Custom output mount path
+              example: "/custom/output/path"
+            storage_config:
+              type: object
+              properties:
+                input_claim_name:
+                  type: string
+                  description: Custom PVC name for input
+                output_claim_name:
+                  type: string
+                  description: Custom PVC name for output
+        dns_config:
+          type: object
+          properties:
+            nameservers:
+              type: array
+              items:
+                type: string
+            searches:
+              type: array
+              items:
+                type: string
+            options:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  value:
+                    type: string
       required:
         - job_name
     generate_job_response:
