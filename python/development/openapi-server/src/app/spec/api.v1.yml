@@ -3,7 +3,7 @@ info:
   title: OpenAPI for AKS Health Probe
   version: 0.0.0
 servers:
-  - url: http://{host}:{port}/api/exa/v1
+  - url: http://{host}:{port}/api/batch/v1
     description: OpenAPI for AKS Health Probe
     variables:
       host:
