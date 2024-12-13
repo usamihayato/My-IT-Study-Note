@@ -1,0 +1,18 @@
+input:
+  base_dir: "input/data"
+  request_file: "contacts.csv"
+  daily_dir: "daily"
+  spot_dir: "spot"
+
+output:
+  base_dir: "output"
+  daily_dir: "daily"
+  spot_dir: "spot"
+
+data_extension:
+  key: "TEST_DE_KEY"
+  batch_size: 100
+
+email:
+  send_email: false
+  definition_key: "TRIGGER_EMAIL_KEY"

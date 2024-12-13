@@ -1,0 +1,27 @@
+# API基本設定
+sfmc:
+  client_id: "your_client_id"
+  client_secret: "your_client_secret"
+  base_url: "http://localhost:5000"
+  access_key: "xxxxx"
+  timeout: 30
+  format: "csv" 
+
+# レート制限設定
+rate_limits:
+  per_10min: 360  # 10分あたりの最大リクエスト数
+  per_day: 410    # 24時間あたりの最大リクエスト数
+
+# リトライ設定
+# 10分あたり360回の制限があるため、リトライは慎重に
+retry:
+  max_attempts: 2        # 最大リトライ回数を控えめに設定
+  wait_seconds: 2.0      # リトライ間隔を長めに設定
+  backoff_factor: 2      # 指数バックオフで待機時間を増やす
+  status_forcelist: [500, 502, 503, 504]  # サーバーエラー時のみリトライ
+
+# プロキシ設定
+use_proxy: false
+proxies:
+  host: "proxy.example.com"
+  port: 8080
