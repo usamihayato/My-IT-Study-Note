@@ -55,7 +55,11 @@ class SFMCClient:
         """
         # 基本設定の読み込み
         self.config = get_connection_config()
-        self.base_url = self.config['sfmc']['base_url'].rstrip('/')
+        # 各種エンドポイントの設定
+        self.auth_url = self.config['sfmc']['base_url']['auth'].rstrip('/')
+        self.rest_url = self.config['sfmc']['base_url']['rest'].rstrip('/')
+        self.soap_url = self.config['sfmc']['base_url']['soap'].rstrip('/')
+        # 認証情報
         self.client_id = self.config['sfmc']['client_id']
         self.client_secret = self.config['sfmc']['client_secret']
         self.retry_config = self.config['retry']
@@ -105,7 +109,7 @@ class SFMCClient:
         if self.access_token and self.token_expiry and datetime.now() < self.token_expiry - timedelta(seconds=self.config['sfmc']['auth']['token_refresh_margin_seconds']):
             return self.access_token
 
-        auth_url = f"{self.base_url}{self.config['sfmc']['auth']['token_endpoint']}"
+        auth_url = f"{self.auth_url}{self.config['sfmc']['auth']['token_endpoint']}"
         payload = {
             "grant_type": "client_credentials",
             "client_id": self.client_id,

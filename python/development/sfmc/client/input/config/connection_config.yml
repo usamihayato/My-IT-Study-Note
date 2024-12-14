@@ -1,8 +1,13 @@
 # SFMC API基本設定
 sfmc:
   # API接続設定
-  #base_url: "https://mcmtwjynv76zg4b73149z7yzw5mm.rest.marketingcloudapis.com"
-  base_url: "http://localhost:5000"
+  base_url:
+    # auth: "https://mcmtwjynv76zg4b73149z7yzw5mm.auth.marketingcloudapis.com"
+    # rest: "https://mcmtwjynv76zg4b73149z7yzw5mm.rest.marketingcloudapis.com"
+    # soap: "https://mcmtwjynv76zg4b73149z7yzw5mm.soap.marketingcloudapis.com"
+    auth: "http://localhost:5000/auth"  
+    rest: "http://localhost:5000/rest"
+    soap: "http://localhost:5000/soap"
   client_id: "your_client_id"
   client_secret: "your_client_secret"
   account_id: "your_mid"  # MID（Business Unit ID）
