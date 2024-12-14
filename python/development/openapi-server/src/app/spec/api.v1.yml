@@ -1,0 +1,221 @@
+openapi: 3.0.0
+info:
+  title: OpenAPI for AKS Health Probe
+  version: 0.0.0
+servers:
+  - url: http://{host}:{port}/api/batch/v1
+    description: OpenAPI for AKS Health Probe
+    variables:
+      host:
+        default: localhost
+      port:
+        default: '10081'
+tags:
+  - name: Metadata
+    description: Metadata related requests
+paths:
+  /health:
+    get:
+      operationId: openapi.controller.health.call
+      summary: Return Server Stats
+      description: Return Server Stats
+      tags: [ 'Metadata' ]
+      responses:
+        '200':
+          description: Server is Running
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/get_health_response'
+  /generate_job:
+    post:
+      operationId: openapi.controller.generate_job.call
+      summary: Generate job
+      description: Generate job to process data
+      tags: [ 'Metadata' ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/generate_job_request'
+      responses:
+        '200':
+          description: return 200 if generate_job operation has successfully finished
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generate_job_response'
+        '500':
+          description: return 500 if generate_job operation has failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generate_job_response'
+  /generate_job_val:
+    post:
+      operationId: openapi.controller.generate_job_val.call
+      summary: Generate job
+      description: Generate job to process data
+      tags: [ 'Metadata' ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/generate_job_request'
+      responses:
+        '200':
+          description: return 200 if generate_job operation has successfully finished
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generate_job_response'
+        '500':
+          description: return 500 if generate_job operation has failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generate_job_response'
+  /job_status:
+    post:
+      operationId: openapi.controller.job_status.call
+      summary: Get job status
+      description: get job status
+      tags: [ 'Metadata' ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/get_job_status_request'
+      responses:
+        '200':
+          description: return 200 if get_job_status operation has successfully finished
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/get_job_status_response'
+        '400':
+          description: return 400 if generated job is still running
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/get_job_status_response'
+        '500':
+          description: return 500 if job_status operation has failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/get_job_status_response'
+components:
+  schemas:
+    get_health_response:
+      description: Server Stats
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+      required:
+        - status
+    generate_job_request:
+      description: Request Generate Job
+      type: object
+      properties:
+        job_name:
+          type: string
+        namespace:
+          type: string
+          description: Kubernetes namespace for the job
+          example: "custom-namespace"
+        command_config:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [python, sh, bash]
+              description: Command type to execute
+            path:
+              type: string
+              description: Path to the script or file to execute
+            args:
+              type: array
+              items:
+                type: string
+              description: Additional arguments for the command
+          example:
+            type: "python"
+            path: "scripts/process.py"
+            args: ["--input-dir", "/app/data"]
+        mount_config:
+          type: object
+          properties:
+            input_path:
+              type: string
+              description: Custom input mount path
+              example: "/custom/input/path"
+            output_path:
+              type: string
+              description: Custom output mount path
+              example: "/custom/output/path"
+            storage_config:
+              type: object
+              properties:
+                input_claim_name:
+                  type: string
+                  description: Custom PVC name for input
+                output_claim_name:
+                  type: string
+                  description: Custom PVC name for output
+        dns_config:
+          type: object
+          properties:
+            nameservers:
+              type: array
+              items:
+                type: string
+            searches:
+              type: array
+              items:
+                type: string
+            options:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  value:
+                    type: string
+      required:
+        - job_name
+    generate_job_response:
+      description: Response Confirmation
+      type: object
+      properties:
+        result:
+          type: string
+          enum:
+            - succeed
+            - failed
+      required:
+        - result
+    get_job_status_request:
+      description: Request Generate Job
+      type: object
+      properties:
+        job_name:
+          type: string
+      required:
+        - job_name
+    get_job_status_response:
+      description: Response Confirmation
+      type: object
+      properties:
+        result:
+          type: string
+          enum:
+            - job completed
+            - job running
+            - failed
+      required:
+        - result

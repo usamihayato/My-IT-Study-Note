@@ -1,0 +1,5 @@
+# api-server-namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openapi-server

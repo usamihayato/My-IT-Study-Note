@@ -1,0 +1,6 @@
+FROM containerregistryakspoc.azurecr.io/aks-env-base:v3
+
+WORKDIR /usr/src
+COPY . .
+
+CMD ["python", "tracer.py", "--enable_jaeger_tracing"]

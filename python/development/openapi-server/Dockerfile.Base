@@ -1,0 +1,36 @@
+ARG registry=acrprivatepocje001
+ARG py_version=3.8-slim-bullseye-20241113
+
+FROM acrprivatepocje001.azurecr.io/base/python:${py_version}
+
+USER root
+WORKDIR /tmp
+ARG build_user=dmadmin
+
+COPY ./install.tgz .
+RUN tar zxvf install.tgz && echo 'deb [ allow-insecure=yes trusted=yes  ] file:///tmp/archives/ ./' > /etc/apt/sources.list
+RUN apt-get update && tar zxvf ./archives/deb_install_packages.tgz -C ./archives && apt-get -y install ./archives/root/*.deb
+
+COPY ./requirements.txt .
+#COPY ./.modules .
+
+# インターネットに接続してパッチ適用済みのpythonライブラリをインストール
+RUN apt-get update && apt-get -y upgrade
+RUN python -m pip install pyparsing==3.0.7 && \
+    python -m pip install packaging==21.3 && \
+    python -m pip install setuptools==70.0.0 && \
+    python -m pip install tomli==2.0.1 && \
+    python -m pip install setuptools_scm==6.4.2 &&\
+    python -m pip install pip==23.3.1
+
+RUN --mount=type=cache,target=/home/${build_user}/.cache/pip \
+    pip install -r requirements.txt
+
+RUN adduser dmadmin && addgroup dmadmin dmadmin && chown -R dmadmin /usr/src/
+USER dmadmin
+
+WORKDIR /usr/src/app
+ENV PYTHONPATH="${PYTHONPATH}:/usr/src/app"
+COPY --chown=dmadmin:dmadmin ./src/lib ./lib
+
+# ENTRYPOINT ["/bin/sh", "-c", "while :; do sleep 10; done"]
