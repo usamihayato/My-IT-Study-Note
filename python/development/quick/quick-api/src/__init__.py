@@ -1,0 +1,3 @@
+"""
+Quick API Client package
+"""

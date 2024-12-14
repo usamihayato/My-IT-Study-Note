@@ -1,0 +1,89 @@
+# API基本設定
+api:
+  base_url: "https://staging.api.quick-co.jp/octpath/v1/api"
+  access_key: "xxxxx"
+  timeout: 30
+  format: "csv" 
+
+# レート制限設定
+rate_limits:
+  per_10min: 360  # 10分あたりの最大リクエスト数
+  per_day: 410    # 24時間あたりの最大リクエスト数
+
+# リトライ設定
+# 10分あたり360回の制限があるため、リトライは慎重に
+retry:
+  max_attempts: 2        # 最大リトライ回数を控えめに設定
+  wait_seconds: 2.0      # リトライ間隔を長めに設定
+  backoff_factor: 2      # 指数バックオフで待機時間を増やす
+  status_forcelist: [500, 502, 503, 504]  # サーバーエラー時のみリトライ
+
+# プロキシ設定
+use_proxy: false
+proxies:
+  host: "proxy.example.com"
+  port: 8080
+
+# 出力設定
+output_dir: "output/data"
+
+# エンドポイント定義
+endpoints:
+  economic_statistics:
+    path: "file"
+    description: "経済統計データ"
+    use_date: true
+  foreign_fund:
+    path: "foreign_fund"
+    description: "外国投信・直近データ"
+    use_universe_next: true
+  foreign_fund_historical:
+    path: "foreign_fund_historical"
+    description: "投信・過去データ（本数）"
+    use_universe_next: true
+  domestic_fund:
+    path: "fund"
+    description: "国内投信・直近データ"
+    use_universe_next: true
+  domestic_fund2:
+    path: "fund2"
+    description: "国内投信・直近データ2"
+    use_universe_next: true
+  domestic_fund_historical:
+    path: "fund_historical"
+    description: "投信・過去データ（本数）"
+    use_universe_next: true
+  foreign_stock:
+    path: "quote_foreign_stock"
+    description: "直近データ（海外株）"
+    use_universe: true
+    use_universe_next: true
+  quote_index:
+    path: "quote_index"
+    description: "直近データ（各種指標）"
+  domestic_stock:
+    path: "quote_stock"
+    description: "直近データ（国内株）"
+    use_universe_next: true
+
+# ユニバース定義
+universes:
+  foreign:  # 海外株式市場
+    hk_stock: "香港株銘柄"
+    ko_stock: "韓国株銘柄"
+    kl_stock: "マレーシア株銘柄"
+    xetra_stock: "クセトラ（ドイツ）株銘柄"
+    aui_stock: "オーストラリア株銘柄"
+    hd_stock: "上海B株銘柄"
+    usa_stock: "北米株銘柄"
+    bdm_stock: "マドリード（スペイン）株銘柄"
+    lse_stock: "LSE（英国）株銘柄"
+    z_stock: "チューリッヒ（スイス）銘柄"
+    paris_stock: "ユーロネクストパリ（フランス）株銘柄"
+    ome_stock: "ストックホルム（スウェーデン）株銘柄"
+    jk_stock: "インドネシア株銘柄"
+    tl_stock: "タイ株銘柄"
+    c_stock: "トロント（カナダ）銘柄"
+    am_stock: "アムステルダム（オランダ）株銘柄"
+    mil_stock: "ミラノ（イタリア）株銘柄"
+    hel_stock: "ヘルシンキ（フィンランド）株銘柄"

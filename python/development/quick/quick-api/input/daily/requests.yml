@@ -1,0 +1,11 @@
+# 日次データ取得定義
+requests:
+  # 指標データ
+  quote_index:
+    enabled: true
+    description: "各種指標・直近データ"
+  
+  # 国内投信データ
+  foreign_fund:
+    enabled: true
+    description: "外国投信・直近データ"
