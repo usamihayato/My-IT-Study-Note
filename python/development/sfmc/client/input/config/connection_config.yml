@@ -1,7 +1,8 @@
 # SFMC API基本設定
 sfmc:
   # API接続設定
-  base_url: "https://mcmtwjynv76zg4b73149z7yzw5mm.rest.marketingcloudapis.com"
+  #base_url: "https://mcmtwjynv76zg4b73149z7yzw5mm.rest.marketingcloudapis.com"
+  base_url: "http://localhost:5000"
   client_id: "your_client_id"
   client_secret: "your_client_secret"
   account_id: "your_mid"  # MID（Business Unit ID）
@@ -56,7 +57,7 @@ messaging:
     delay_between_chunks: 1  # チャンク間の待機時間（秒）
 
 # プロキシ設定（カスタム）
-use_proxy: true
+use_proxy: false
 proxies:
   host: "proxy.example.com"
   port: 8080
