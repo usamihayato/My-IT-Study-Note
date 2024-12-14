@@ -1,4 +1,5 @@
 import os
+import json
 import time
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
@@ -9,8 +10,40 @@ from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
+
+class RateLimiter:
+    """APIレート制限の管理クラス"""
+    
+    def __init__(self, limits: Dict[str, int]):
+        """
+        レート制限管理の初期化
+        
+        Args:
+            limits (Dict[str, int]): レート制限の設定
+        """
+        self.limits = limits
+        self.requests = []
+    
+    def wait_if_needed(self) -> None:
+        """必要に応じてレート制限による待機を行う"""
+        now = datetime.now()
+        
+        # 古いリクエスト履歴を削除
+        self.requests = [ts for ts in self.requests 
+                        if now - ts < timedelta(minutes=1)]
+        
+        # 1分あたりの制限をチェック
+        if len(self.requests) >= self.limits['per_minute']:
+            sleep_time = 60 - (now - self.requests[0]).total_seconds()
+            if sleep_time > 0:
+                logger.info(f"レート制限により {sleep_time:.2f} 秒待機します")
+                time.sleep(sleep_time)
+        
+        self.requests.append(now)
+
+
 class SFMCClient:
-    """SFMC API クライアント"""
+    """SFMC API共通クライアント"""
 
     def __init__(self, mode: str, date: str):
         """
@@ -20,21 +53,33 @@ class SFMCClient:
             mode (str): 実行モード ('daily' or 'spot')
             date (str): 実行日付 (YYYYMMDD形式)
         """
+        # 基本設定の読み込み
         self.config = get_connection_config()
         self.base_url = self.config['sfmc']['base_url'].rstrip('/')
         self.client_id = self.config['sfmc']['client_id']
         self.client_secret = self.config['sfmc']['client_secret']
         self.retry_config = self.config['retry']
+        
+        # 実行モードと出力設定
         self.mode = mode
         self.date = date
         self.output_dir = get_output_path(mode, date)
+        
+        # 認証関連
         self.access_token = None
         self.token_expiry = None
-
+        
+        # レート制限の初期化
+        self.rate_limiter = RateLimiter(self.config['rate_limits']['rest_api'])
+        self.msg_rate_limiter = RateLimiter(self.config['rate_limits']['transactional_messaging'])
+        
+        # 初期設定の実行
         self._init_proxy_settings()
         self._ensure_output_dir()
+        
         logger.info(f"SFMCClientを初期化しました - mode: {mode}, date: {date}")
 
+    # プライベートメソッド: 初期化関連
     def _init_proxy_settings(self) -> None:
         """プロキシ設定の初期化"""
         self.proxies = None
@@ -54,12 +99,13 @@ class SFMCClient:
             os.makedirs(self.output_dir)
             logger.info(f"出力ディレクトリを作成しました: {self.output_dir}")
 
+    # プライベートメソッド: 認証関連
     def _get_auth_token(self) -> str:
         """認証トークンを取得または更新"""
-        if self.access_token and self.token_expiry and datetime.now() < self.token_expiry:
+        if self.access_token and self.token_expiry and datetime.now() < self.token_expiry - timedelta(seconds=self.config['sfmc']['auth']['token_refresh_margin_seconds']):
             return self.access_token
 
-        auth_url = f"{self.base_url}/v2/token"
+        auth_url = f"{self.base_url}{self.config['sfmc']['auth']['token_endpoint']}"
         payload = {
             "grant_type": "client_credentials",
             "client_id": self.client_id,
@@ -67,7 +113,12 @@ class SFMCClient:
         }
 
         try:
-            response = requests.post(auth_url, json=payload)
+            response = requests.post(
+                auth_url,
+                json=payload,
+                proxies=self.proxies,
+                timeout=self.config['sfmc']['connection']['timeout_seconds']
+            )
             response.raise_for_status()
             token_data = response.json()
             
@@ -88,16 +139,38 @@ class SFMCClient:
             "Content-Type": "application/json"
         }
 
+    # プライベートメソッド: リクエスト実行関連
     def _make_request(
         self,
         method: str,
         url: str,
-        json: Dict = None,
-        params: Dict = None
+        is_transactional: bool = False,
+        **kwargs
     ) -> requests.Response:
-        """APIリクエストを実行する"""
-        retry_wait = self.retry_config.get('wait_seconds', 1.0)
+        """
+        拡張されたAPIリクエスト実行メソッド
+
+        Args:
+            method (str): HTTPメソッド
+            url (str): リクエストURL
+            is_transactional (bool): トランザクショナルメッセージングAPIかどうか
+            **kwargs: requestsライブラリに渡す追加のパラメータ
+
+        Returns:
+            requests.Response: APIレスポンス
+
+        Raises:
+            RequestException: APIリクエストでエラーが発生した場合
+        """
+        # レート制限の適用
+        if is_transactional:
+            self.msg_rate_limiter.wait_if_needed()
+        else:
+            self.rate_limiter.wait_if_needed()
+
+        retry_wait = self.retry_config.get('initial_wait_seconds', 1.0)
         retry_limit = self.retry_config.get('max_attempts', 2)
+        backoff_factor = self.retry_config.get('backoff_factor', 2)
 
         for retry_count in range(retry_limit + 1):
             try:
@@ -105,15 +178,26 @@ class SFMCClient:
                     method=method,
                     url=url,
                     headers=self._get_headers(),
-                    json=json,
-                    params=params,
-                    proxies=self.proxies
+                    proxies=self.proxies,
+                    **kwargs
                 )
+                
+                # レスポンスコードのチェック
+                if response.status_code in self.retry_config['status_forcelist']:
+                    if retry_count >= retry_limit:
+                        response.raise_for_status()
+                    wait_time = retry_wait * (backoff_factor ** retry_count)
+                    logger.warning(f"ステータスコード {response.status_code} のためリトライします。待機時間: {wait_time}秒")
+                    time.sleep(wait_time)
+                    continue
+                    
                 response.raise_for_status()
                 return response
 
             except RequestException as e:
                 logger.error(f"APIリクエストエラー: {str(e)}")
+                
+                # エラーの詳細をログに出力
                 if hasattr(e.response, 'json'):
                     try:
                         error_detail = e.response.json()
@@ -121,127 +205,55 @@ class SFMCClient:
                     except ValueError:
                         pass
 
-                if 400 <= e.response.status_code < 500:
+                # 特定のエラーは即座に再スロー
+                if e.response and e.response.status_code in self.retry_config['status_blacklist']:
                     raise
+
                 if retry_count >= retry_limit:
                     raise
 
-                logger.info(f"リトライを実行します ({retry_count + 1}/{retry_limit})")
-                time.sleep(retry_wait)
+                wait_time = retry_wait * (backoff_factor ** retry_count)
+                logger.info(f"リトライを実行します ({retry_count + 1}/{retry_limit}). 待機時間: {wait_time}秒")
+                time.sleep(wait_time)
 
-    def _save_response(self, response: requests.Response, prefix: str) -> str:
-        """レスポンスをファイルに保存"""
+    def _save_response(
+        self,
+        response: requests.Response,
+        prefix: str,
+        include_request: bool = True
+    ) -> str:
+        """
+        レスポンスをJSONファイルに保存
+        
+        Args:
+            response (requests.Response): APIレスポンス
+            prefix (str): ファイル名のプレフィックス
+            include_request (bool): リクエスト情報も保存するかどうか
+        
+        Returns:
+            str: 保存したファイルのパス
+        """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filepath = os.path.join(self.output_dir, f"{prefix}_{timestamp}.json")
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(response.text)
-        logger.info(f"レスポンスを保存しました: {filepath}")
-        return filepath
-
-    def upsert_data_extension_rows(
-        self,
-        external_key: str,
-        rows: List[Dict],
-        save_response: bool = True
-    ) -> Dict[str, Any]:
-        """
-        データエクステンションにデータをアップサート
-        Args:
-            external_key (str): データエクステンションの外部キー
-            rows (List[Dict]): アップサートするデータの配列
-            save_response (bool, optional): レスポンスを保存するかどうか
-        Returns:
-            Dict[str, Any]: APIレスポンス
-        """
-        endpoint = f"{self.base_url}/hub/v1/dataevents/key:{external_key}/rowset"
         
-        formatted_rows = [{
-            "keys": {key: value for key, value in row.items() if key in row.get("keys", [])},
-            "values": {key: value for key, value in row.items() if key not in row.get("keys", [])}
-        } for row in rows]
-
-        response = self._make_request('POST', endpoint, json=formatted_rows)
-        result = response.json()
-
-        if save_response:
-            self._save_response(response, "de_upsert")
-
-        return result
-
-    def trigger_email_send(
-        self,
-        definition_key: str,
-        recipient: Dict[str, str],
-        attributes: Optional[Dict] = None,
-        save_response: bool = True
-    ) -> Dict[str, Any]:
-        """
-        トリガーメールを送信
-        Args:
-            definition_key (str): メール定義の外部キー
-            recipient (Dict[str, str]): 送信先情報
-            attributes (Optional[Dict]): カスタム属性
-            save_response (bool, optional): レスポンスを保存するかどうか
-        Returns:
-            Dict[str, Any]: APIレスポンス
-        """
-        endpoint = f"{self.base_url}/messaging/v1/messageDefinitionSends/key:{definition_key}/send"
-        
-        payload = {
-            "To": {
-                "Address": recipient.get("email"),
-                "SubscriberKey": recipient.get("subscriber_key", recipient.get("email")),
-                "ContactAttributes": {
-                    "SubscriberAttributes": attributes or {}
-                }
+        output_data = {
+            "response": {
+                "status_code": response.status_code,
+                "headers": dict(response.headers),
+                "body": response.json() if response.content else None
             }
         }
-
-        response = self._make_request('POST', endpoint, json=payload)
-        result = response.json()
-
-        if save_response:
-            self._save_response(response, "email_send")
-
-        return result
-
-    def create_contact(
-        self,
-        contact_data: Dict,
-        save_response: bool = True
-    ) -> Dict[str, Any]:
-        """
-        連絡先を作成または更新
-        Args:
-            contact_data (Dict): 連絡先データ
-            save_response (bool, optional): レスポンスを保存するかどうか
-        Returns:
-            Dict[str, Any]: APIレスポンス
-        """
-        endpoint = f"{self.base_url}/contacts/v1/contacts"
         
-        payload = {
-            "contactKey": contact_data.get("email"),
-            "attributeSets": [{
-                "name": "Email Addresses",
-                "items": [{
-                    "values": [{
-                        "name": "Email Address",
-                        "value": contact_data.get("email")
-                    }]
-                }]
-            }],
-            "attributes": [
-                {"name": key, "value": value}
-                for key, value in contact_data.items()
-                if key != "email"
-            ]
-        }
-
-        response = self._make_request('POST', endpoint, json=payload)
-        result = response.json()
-
-        if save_response:
-            self._save_response(response, "contact_create")
-
-        return result
+        if include_request and response.request:
+            output_data["request"] = {
+                "method": response.request.method,
+                "url": response.request.url,
+                "headers": dict(response.request.headers),
+                "body": response.request.body.decode('utf-8') if response.request.body else None
+            }
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(output_data, f, ensure_ascii=False, indent=2)
+        
+        logger.info(f"レスポンスを保存しました: {filepath}")
+        return filepath
