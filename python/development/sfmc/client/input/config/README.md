@@ -170,3 +170,158 @@ https://developer.salesforce.com/docs/marketing/marketing-cloud/guide/transactio
     - ファイル: output/logs/sfmc_api_error.log
     - レベル: ERROR以上
     - 用途: エラー監視、障害分析
+## request_config.yml
+
+### 現在の設定内容
+
+#### 基本構造
+```yaml
+# 入力設定
+input:
+  base_dir: "input"            # 入力のベースディレクトリ
+  daily_dir: "daily"          # 日次実行用ディレクトリ
+  spot_dir: "spot"            # スポット実行用ディレクトリ
+  request_file: "request.csv" # 処理対象のファイル名
+
+# 出力設定
+output:
+  base_dir: "output"          # 出力のベースディレクトリ
+  daily_dir: "daily"          # 日次実行の出力ディレクトリ
+  spot_dir: "spot"            # スポット実行の出力ディレクトリ
+
+# ファイル形式設定
+file_format:
+  encoding: "utf-8"
+  delimiter: ","
+  newline: "\n"
+
+# 実行モード設定
+execution:
+  allowed_modes:              
+    - "daily"
+    - "spot"
+  default_mode: "daily"
+```
+
+### ディレクトリ構造
+```
+sfmc-api-integration/
+├── input/
+│   ├── daily/
+│   │   └── request.csv        # 日次処理用の入力ファイル
+│   └── spot/
+│       └── YYYYMMDD/          # 処理日付のディレクトリ
+│           └── request.csv    # スポット処理用の入力ファイル
+│
+└── output/
+    ├── daily/
+    │   └── YYYYMMDD/         # 処理日付のディレクトリ
+    │       └── data/         # 処理結果
+    └── spot/
+        └── YYYYMMDD/         # 処理日付のディレクトリ
+            └── data/         # 処理結果
+```
+
+### 要検討事項
+
+#### 1. 入力ファイル仕様
+- [ ] CSVのカラム定義
+  ```yaml
+  # 例：想定されるカラム定義
+  columns:
+    - name: "email"
+      type: "string"
+      required: true
+      validation: "email"
+    - name: "subscriber_key"
+      type: "string"
+      required: true
+    # 他のカラムも同様に定義
+  ```
+
+- [ ] バリデーションルール
+  - データ型チェック
+  - 必須項目チェック
+  - フォーマットチェック（メールアドレスなど）
+  - 文字数制限
+
+- [ ] エラーハンドリング
+  - バリデーションエラー時の処理
+  - エラーレコードの出力方法
+
+#### 2. 出力ファイル仕様
+- [ ] ファイル種類と命名規則
+  ```yaml
+  # 例：出力ファイルの定義
+  output_files:
+    success:
+      name_format: "success_%Y%m%d_%H%M%S.csv"
+      retention_days: 30
+    error:
+      name_format: "error_%Y%m%d_%H%M%S.csv"
+      retention_days: 30
+  ```
+
+- [ ] 出力データ形式
+  - 成功/失敗レコードの区分け
+  - エラー内容の記録方法
+  - レスポンスデータの保存形式
+
+#### 3. 処理ルール
+- [ ] バッチ処理設定
+  ```yaml
+  # 例：バッチ処理の設定
+  batch:
+    size: 50                # 1バッチあたりの処理件数
+    parallel: false         # 並行処理の有無
+    error_threshold: 0.1    # エラー率の閾値（10%）
+  ```
+
+- [ ] リカバリー処理
+  - 途中失敗時の再開方法
+  - 重複チェックの方法
+  - 処理済みレコードの管理
+
+#### 4. 運用設定
+- [ ] ジョブ実行パラメータ
+  ```yaml
+  # 例：実行時パラメータ
+  job:
+    timeout: 3600          # 実行タイムアウト（秒）
+    retry:
+      max_attempts: 3      # 最大リトライ回数
+      interval: 300        # リトライ間隔（秒）
+  ```
+
+- [ ] 監視設定
+  - 処理の進捗状況
+  - パフォーマンスメトリクス
+  - アラート条件
+
+### 実装の優先順位
+
+1. 基本機能
+   - [x] ディレクトリ構造の定義
+   - [x] 基本的な設定ファイル形式
+   - [x] 実行モードの管理
+
+2. 入力処理
+   - [ ] CSVファイル読み込み
+   - [ ] 基本的なバリデーション
+   - [ ] エラーハンドリング
+
+3. 出力処理
+   - [ ] 処理結果の保存
+   - [ ] エラーログの出力
+   - [ ] ファイル管理
+
+4. 拡張機能
+   - [ ] 並行処理
+   - [ ] パフォーマンス最適化
+   - [ ] 監視機能
+
+### 今後の検討事項
+1. データ型とバリデーションの詳細定義
+2. エラー処理の詳細フロー
+3. パフォーマンスチューニングの指針
+4. 運用監視の要件
