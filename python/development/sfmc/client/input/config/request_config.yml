@@ -1,0 +1,25 @@
+# 入力設定
+input:
+  base_dir: "input"            # 入力のベースディレクトリ
+  daily_dir: "daily"          # 日次実行用ディレクトリ
+  spot_dir: "spot"            # スポット実行用ディレクトリ
+  request_file: "request.csv" # 処理対象のファイル名（仮の名前）
+
+# 出力設定
+output:
+  base_dir: "output"          # 出力のベースディレクトリ
+  daily_dir: "daily"          # 日次実行の出力ディレクトリ
+  spot_dir: "spot"            # スポット実行の出力ディレクトリ
+
+# ファイル形式設定
+file_format:
+  encoding: "utf-8"           # ファイルエンコーディング
+  delimiter: ","              # CSVの区切り文字
+  newline: "\n"              # 改行コード
+
+# 実行モード設定
+execution:
+  allowed_modes:              # 許可される実行モード
+    - "daily"
+    - "spot"
+  default_mode: "daily"      # デフォルトの実行モード

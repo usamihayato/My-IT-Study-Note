@@ -1,0 +1,63 @@
+version: 1
+disable_existing_loggers: false
+
+# フォーマッター定義
+formatters:
+  standard:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+  detailed:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(lineno)d - %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+
+# ハンドラー定義
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: standard
+    stream: ext://sys.stdout
+
+  file:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: output/logs/sfmc_api.log
+    encoding: utf8
+    when: 'midnight'    # 日付変更時にローテーション
+    interval: 1         # 1日ごと
+    backupCount: 30     # 30日分保持
+    delay: true         # ファイルは最初のログ出力時に作成
+
+  error_file:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: ERROR
+    formatter: detailed
+    filename: output/logs/sfmc_api_error.log
+    encoding: utf8
+    when: 'midnight'
+    interval: 1
+    backupCount: 30
+    delay: true
+    
+# ロガー定義
+loggers:
+  app:  # アプリケーション全体のロガー
+    level: DEBUG
+    handlers: [console, file, error_file]
+    propagate: false
+
+  app.api:  # API関連のロガー（クライアント、リクエスト処理など）
+    level: DEBUG
+    handlers: [console, file, error_file]
+    propagate: false
+
+  app.core:  # コア機能のロガー（設定、ユーティリティなど）
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+
+# ルートロガー（上記以外のすべてのロガー）
+root:
+  level: WARNING
+  handlers: [console, error_file]

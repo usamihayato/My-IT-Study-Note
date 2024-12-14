@@ -1,0 +1,79 @@
+# SFMC API基本設定
+sfmc:
+  # API接続設定
+  base_url:
+    # auth: "https://mcmtwjynv76zg4b73149z7yzw5mm.auth.marketingcloudapis.com"
+    # rest: "https://mcmtwjynv76zg4b73149z7yzw5mm.rest.marketingcloudapis.com"
+    # soap: "https://mcmtwjynv76zg4b73149z7yzw5mm.soap.marketingcloudapis.com"
+    auth: "http://localhost:5000/auth"  
+    rest: "http://localhost:5000/rest"
+    soap: "http://localhost:5000/soap"
+  client_id: "your_client_id"
+  client_secret: "your_client_secret"
+  account_id: "your_mid"  # MID（Business Unit ID）
+  
+  # 認証設定
+  auth:
+    token_endpoint: "/v2/token"
+    token_refresh_margin_seconds: 300  # トークン更新を行う残り時間のマージン（5分前）
+    
+  # 接続設定（必須）
+  connection:
+    timeout_seconds: 30        # リクエストタイムアウト
+    keep_alive: true          # HTTP永続接続を有効化
+    keep_alive_timeout: 4      # Keep-Alive タイムアウト（サーバーは5秒）
+
+# レート制限設定（公式の制限値）
+rate_limits:
+  transactional_messaging:
+    per_minute: 2400          # 1分あたりの最大リクエスト数
+    max_batch_size: 50        # 1リクエストあたりの最大バッチサイズ
+  rest_api:
+    per_minute: 36           # 1分あたりの最大リクエスト数
+    per_hour: 360            # 1時間あたりの最大リクエスト数
+    per_day: 410             # 24時間あたりの最大リクエスト数
+
+# リトライ設定（公式推奨）
+retry:
+  max_attempts: 2             # 最大リトライ回数
+  initial_wait_seconds: 2.0   # 初期待機時間
+  backoff_factor: 2          # 指数バックオフの係数
+  # リトライ対象のステータスコード
+  status_forcelist:
+    - 408  # Request Timeout
+    - 429  # Too Many Requests
+    - 500  # Internal Server Error
+    - 502  # Bad Gateway
+    - 503  # Service Unavailable
+    - 504  # Gateway Timeout
+  # リトライを行わないステータスコード
+  status_blacklist:
+    - 400  # Bad Request
+    - 401  # Unauthorized
+    - 403  # Forbidden
+    - 404  # Not Found
+    - 422  # Unprocessable Entity
+
+# メッセージング設定
+messaging:
+  message_key_ttl_hours: 72  # メッセージキーの一意性保持期間（72時間）
+  batch_processing:
+    chunk_size: 50          # 一括処理時のチャンクサイズ
+    delay_between_chunks: 1  # チャンク間の待機時間（秒）
+
+# プロキシ設定（カスタム）
+use_proxy: false
+proxies:
+  host: "proxy.example.com"
+  port: 8080
+
+
+# 接続プール設定
+connection:
+  pool_connections: 10   # 必要な場合のみ設定
+  pool_maxsize: 10      # 必要な場合のみ設定
+
+# 設定が必要になるケース：
+# 1. 大規模なバッチ処理を頻繁に行う
+# 2. マイクロサービス環境で複数のサービスが共有
+# 3. 高頻度のトランザクショナルメール送信
