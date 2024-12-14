@@ -148,3 +148,25 @@ retry:
 こちら参照:
 https://developer.salesforce.com/docs/marketing/marketing-cloud/guide/transactional-messaging-best-practices.html
 
+## logging_config.yml
+
+### 出力先
+
+1. コンソール出力
+
+    - レベル: INFO以上
+    - 用途: 開発時のデバッグ、実行状況の確認
+
+
+1. 通常ログファイル
+
+    - ファイル: output/logs/sfmc_api.log
+    - レベル: DEBUG以上
+    - 用途: 詳細な実行ログ、トラブルシューティング
+
+
+1. エラーログファイル
+
+    - ファイル: output/logs/sfmc_api_error.log
+    - レベル: ERROR以上
+    - 用途: エラー監視、障害分析
