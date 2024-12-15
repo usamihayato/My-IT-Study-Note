@@ -1,6 +1,7 @@
 import os
 import gzip
 import time
+from datetime import datetime
 from typing import Dict, Optional, Tuple, Literal
 from urllib.error import HTTPError
 import urllib.request
@@ -45,7 +46,7 @@ class QuickApiClient:
             valid_universes = self.universes.get('foreign', {}).keys()
             if universe not in valid_universes:
                 raise ValueError(f"無効な市場コードです: {universe}")
-            
+
     def _init_proxy_settings(self) -> None:
         """プロキシ設定の初期化"""
         self.proxy_settings = {}
@@ -82,8 +83,6 @@ class QuickApiClient:
 
     def _save_data(self, data: str, filepath: str) -> str:
         """データをファイルに保存する"""
-        # 出力ディレクトリの作成はDataCollectorで管理されるため、
-        # ここでは単純にファイルの保存のみを行う
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(data)
@@ -101,8 +100,11 @@ class QuickApiClient:
         if endpoint not in self.endpoints:
             raise ValueError(f"未定義のエンドポイント: {endpoint}")
 
+        # エンドポイント設定の取得
+        endpoint_config = self.endpoints[endpoint]
+
         # URLの構築
-        url = f"{self.base_url}/{self.endpoints[endpoint]['path']}.{self.format}"
+        url = f"{self.base_url}/{endpoint_config['path']}.{self.format}"
         if params:
             query_string = "&".join(f"{k}={v}" for k, v in params.items() if v is not None)
             url = f"{url}?{query_string}"
@@ -149,7 +151,7 @@ class QuickApiClient:
         データを取得してファイルに保存する
         Args:
             endpoint (str): エンドポイント名
-            output_path (str): 出力ファイルパス（DataCollectorで管理）
+            output_path (str): 出力ファイルパス
             date (Optional[str]): 取得日（YYYYMMDD形式）
             date_from (Optional[str]): 開始日（YYYYMMDD形式）
             date_to (Optional[str]): 終了日（YYYYMMDD形式）
@@ -158,6 +160,12 @@ class QuickApiClient:
         Returns:
             Tuple[str, Optional[str]]: (保存したファイルパス, 次のuniverse_next)
         """
+        # パラメータのバリデーション
+        if date:
+            self._validate_date(endpoint, date)
+        if universe is not None:
+            self._validate_universe(endpoint, universe)
+
         params = {}
         if date:
             params['date'] = date
