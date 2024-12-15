@@ -301,6 +301,18 @@ python main.py --mode spot --date 20231208
 
 ## テスト実行
 ### ユニットテスト
+#### request.ymlのバリデーションチェック
+
+- `request.yml`ファイルの作成・更新時はこちらを実行すること
+
+```bash
+# 全体の実行
+pytest tests/test_request_validation.py
+
+# 特定のテストケースを実行
+pytest tests/test_request_validation.py::TestRequestValidation::test_daily_request_definition
+pytest tests/test_request_validation.py::TestRequestValidation::test_spot_request_definitions
+```
 
 ```bash
 # プロジェクトルートで実行
