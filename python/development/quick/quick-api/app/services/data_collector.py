@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from pathlib import Path
 from app.api.client import QuickApiClient
-from app.core.config import get_input_path, get_output_path
+from app.core.config import get_input_path, get_output_path, get_request_config
 from app.core.logger import get_logger
 
 
@@ -160,10 +160,13 @@ class DataCollector:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         execution_date = date or datetime.now().strftime("%Y%m%d")
         
+        config = get_request_config()
+        base_output = config['output']['base_dir']
+        
         if mode == 'daily':
-            report_dir = os.path.join("output/daily", execution_date, "reports")
-        else:
-            report_dir = os.path.join("output/spot", execution_date, "reports")
+            report_dir = os.path.join(base_output, config['output']['daily_dir'], execution_date, "reports")
+        else:  # spot
+            report_dir = os.path.join(base_output, config['output']['spot_dir'], execution_date, "reports")
             
         os.makedirs(report_dir, exist_ok=True)
         report_path = os.path.join(report_dir, f"execution_report_{timestamp}.txt")
