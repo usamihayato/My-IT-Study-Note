@@ -30,6 +30,13 @@ class QuickApiClient:
         self._init_proxy_settings()
         logger.info(f"QuickApiClientを初期化しました（レスポンス形式: {self.format}）")
 
+    def _validate_date(self, endpoint: str, date: str) -> None:
+        """日付パラメータのバリデーション"""
+        if endpoint == 'file':
+            min_date = self.endpoints['file'].get('min_date')
+            if min_date and date < min_date:
+                raise ValueError(f"指定された日付が不正です。file APIでは{min_date}以降の日付を指定してください。")
+
     def _init_proxy_settings(self) -> None:
         """プロキシ設定の初期化"""
         self.proxy_settings = {}
