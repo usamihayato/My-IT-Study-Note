@@ -1,7 +1,7 @@
 # API基本設定
 api:
   base_url: "https://staging.api.quick-co.jp/octpath/v1/api"
-  access_key: "xxxxx"
+  access_key: "xxx"
   timeout: 30
   format: "csv" 
 
@@ -23,9 +23,6 @@ use_proxy: false
 proxies:
   host: "proxy.example.com"
   port: 8080
-
-# 出力設定
-output_dir: "output/data"
 
 # エンドポイント定義
 endpoints:
