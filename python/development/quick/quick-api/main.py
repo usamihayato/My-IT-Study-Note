@@ -7,7 +7,7 @@ from app.core.logger import setup_logging, get_logger
 
 def main():
     setup_logging()
-    logger = get_logger(__name__)
+    logger = get_logger('app.main')
 
     parser = argparse.ArgumentParser(description='Quick APIデータ収集ツール')
     parser.add_argument(

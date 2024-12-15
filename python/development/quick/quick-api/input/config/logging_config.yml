@@ -19,18 +19,26 @@ handlers:
     stream: ext://sys.stdout
 
   file:
-    class: logging.FileHandler  # TimedRotatingFileHandler から変更
+    class: logging.handlers.TimedRotatingFileHandler
     level: DEBUG
     formatter: detailed
     filename: output/logs/quick_api.log
     encoding: utf8
+    when: 'midnight'    # 日付変更時にローテーション
+    interval: 1         # 1日ごと
+    backupCount: 30     # 30日分保持
+    delay: true         # ファイルは最初のログ出力時に作成
 
   error_file:
-    class: logging.FileHandler  
+    class: logging.handlers.TimedRotatingFileHandler
     level: ERROR
     formatter: detailed
     filename: output/logs/quick_api_error.log
     encoding: utf8
+    when: 'midnight'
+    interval: 1
+    backupCount: 30
+    delay: true
     
 # ロガー定義
 loggers:
@@ -41,7 +49,7 @@ loggers:
 
   app.api:  # API関連のロガー（クライアント、リクエスト処理など）
     level: DEBUG
-    handlers: [file, error_file]
+    handlers: [console, file, error_file]
     propagate: false
 
   app.core:  # コア機能のロガー（設定、ユーティリティなど）
