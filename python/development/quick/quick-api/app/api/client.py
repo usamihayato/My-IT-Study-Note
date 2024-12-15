@@ -37,6 +37,15 @@ class QuickApiClient:
             if min_date and date < min_date:
                 raise ValueError(f"指定された日付が不正です。file APIでは{min_date}以降の日付を指定してください。")
 
+    def _validate_universe(self, endpoint: str, universe: Optional[str]) -> None:
+        """ユニバースパラメータのバリデーション"""
+        if endpoint == 'quote_foreign_stock':
+            if not universe:
+                raise ValueError("quote_foreign_stockでは市場（universe）の指定が必要です")
+            valid_universes = self.universes.get('foreign', {}).keys()
+            if universe not in valid_universes:
+                raise ValueError(f"無効な市場コードです: {universe}")
+            
     def _init_proxy_settings(self) -> None:
         """プロキシ設定の初期化"""
         self.proxy_settings = {}
