@@ -12,44 +12,48 @@ Quick APIからデータを取得するためのクライアントツール。
 ## ディレクトリ構成
 ```
 project_root/
-├── README.md                    # プロジェクトの説明
-├── src/                         # ソースコード
-│   └── app/
+├── README.md                     # プロジェクトの説明
+├── app/
+│   ├── __init__.py
+│   ├── api/                      # API関連
+│   │   ├── __init__.py
+│   │   └── client.py             # APIクライアント
+│   ├── core/                     # コア機能
+│   │   ├── __init__.py     
+│   │   ├── config.py             # 設定読み込み
+│   │   └── logger.py             # ログ設定
+│   └── services/                 # サービス層
 │       ├── __init__.py
-│       ├── main.py              # メインスクリプト
-│       ├── api/                 # API関連
-│       │   ├── __init__.py
-│       │   └── client.py        # APIクライアント
-│       ├── core/                # コア機能
-│       │   ├── __init__.py
-│       │   ├── config.py        # 設定読み込み
-│       │   └── logger.py        # ログ設定
-│       └── services/            # サービス層
-│           ├── __init__.py
-│           └── data_collector.py # データ収集サービス
-│
-├── input/                       # 入力ファイル
-│   ├── config/                  # 設定ファイル
-│   │   ├── connection_config.yml    # API接続設定
-│   │   └── logging_config.yml       # ログ設定
-│   ├── daily/                  # 日次実行定義
-│   │   └── requests.yml       # 日次リクエスト定義
-│   └── spot/                   # スポット実行定義
-│       └── YYYYMMDD/          # 実行日ごとのディレクトリ
-│           └── requests.yml   # スポットリクエスト定義
-│
-└── output/                      # 出力ファイル
-    ├── daily/                   # 日次実行の出力
-    │   └── YYYYMMDD/           # 実行日ごとのディレクトリ
-    │       ├── data/           # 取得データ
-    │       └── reports/        # 実行レポート
-    ├── spot/                    # スポット実行の出力
-    │   └── YYYYMMDD/           # 実行日ごとのディレクトリ
-    │       ├── data/           # 取得データ
-    │       └── reports/        # 実行レポート
-    └── logs/                    # ログファイル
-        ├── quick_api.log        # アプリケーションログ
-        └── quick_api_error.log  # エラーログ
+│       └── data_collector.py     # データ収集サービス
+├── input/                        # 入力ファイル
+│   ├── config/                   # 設定ファイル
+│   │   ├── connection_config.yml # API接続設定
+│   │   └── logging_config.yml    # ログ設定
+│   ├── daily/                    # 日次実行定義
+│   │   └── requests.yml          # 日次リクエスト定義
+│   └── spot/                     # スポット実行定義
+│       └── YYYYMMDD/             # 実行日ごとのディレクトリ
+│           └── requests.yml      # スポットリクエスト定義
+├── output/                       # 出力ファイル
+│   │   └── YYYYMMDD/             # 実行日ごとのディレクトリ
+│   ├── daily/                    # 日次実行の出力
+│   │       ├── data/             # 取得データ
+│   │       └── reports/          # 実行レポート
+│   ├── spot/                     # スポット実行の出力
+│   │   └── YYYYMMDD/             # 実行日ごとのディレクトリ
+│   │       ├── data/             # 取得データ
+│   │       └── reports/          # 実行レポート
+│   └── logs/                     # ログファイル
+│       ├── quick_api.log         # アプリケーションログ
+│       └── quick_api_error.log   # エラーログ
+├── tests/                         # テストコード
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── test_client.py
+│   ├── test_config.py
+│   └── test_data_collector.py
+├── main.py                       # メインスクリプト
+└── requirements.txt              # 依存関係
 
 ```
 
@@ -97,7 +101,7 @@ python -c "import site; print(site.getsitepackages()[0])"
 
 3. pthファイルに以下の内容を記載（プロジェクトの絶対パスを指定）
 ```
-C:\<rootpath>\src
+C:\<rootpath>
 ```
 
 ## 設定
@@ -145,13 +149,13 @@ requests:
 ### 日次実行
 
 ```bash
-python src/app/main.py --mode daily
+python main.py --mode daily
 ```
 
 ### スポット実行
 
 ```bash
-python src/app/main.py --mode spot --date 20231208
+python main.py --mode spot --date 20231208
 ```
 
 ## 出力ファイル
@@ -186,13 +190,13 @@ pytest
 pytest -v
 
 # 特定のテストファイルを実行
-pytest tests/test_api/test_client.py
+pytest tests/test_client.py
 
 # 特定のテストクラスを実行
-pytest tests/test_api/test_client.py::TestQuickApiClient
+pytest tests/test_client.py::TestQuickApiClient
 
 # 特定のテストメソッドを実行
-pytest tests/test_api/test_client.py::TestQuickApiClient::test_init_client
+pytest tests/test_client.py::TestQuickApiClient::test_init_client
 ```
 
 ### カバレッジレポート作成
@@ -213,9 +217,6 @@ pytest --cov=app --cov-report=html tests/
 
 - `tests/`: テストコードのルートディレクトリ
   - `conftest.py`: pytest共通設定、フィクスチャ定義
-  - `test_api/`: APIクライアント関連のテスト
-  - `test_core/`: コア機能のテスト
-  - `test_services/`: サービス層のテスト
 
 ### テスト実行時の注意点
 
