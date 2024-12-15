@@ -92,11 +92,11 @@ class DataCollector:
         try:
             if 'date_range' in config:
                 # 期間指定のリクエスト
-                date_range = config['date_range']
-                
+                date_range = config['date_range']                
                 # universe_next対応の処理追加
                 universe_next = None
                 page = 1
+                
                 while True:
                     # ページ番号付きのファイル名を生成
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -125,16 +125,16 @@ class DataCollector:
             else:
                 # 通常のリクエスト
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                output_filename = f"{name}_{timestamp}.csv"
-                output_path = os.path.join(base_dir, output_filename)
-                
                 # universe_next対応の処理追加
                 universe_next = None
                 page = 1
+                
                 while True:
+                    output_filename = f"{name}_{timestamp}"
                     if page > 1:
-                        output_filename = f"{name}_{timestamp}_page{page}.csv"
-                        output_path = os.path.join(base_dir, output_filename)
+                        output_filename += f"_page{page}"
+                    output_filename += ".csv"
+                    output_path = os.path.join(base_dir, output_filename)
 
                     filepath, universe_next = self.client.request_data(
                         endpoint=name,
@@ -142,17 +142,20 @@ class DataCollector:
                         universe_next=universe_next
                     )
 
-                    # 続きのデータがない場合は終了
                     if not universe_next:
                         break
 
                     page += 1
-                    time.sleep(1)  # APIレート制限を考慮
-                
-            self.results["success"].append(name)
+                    time.sleep(1)
+
+            # リクエスト全体の成功を1回だけ記録
+            if name not in self.results["success"]:
+                self.results["success"].append(name)
                 
         except Exception as e:
             logger.error(f"{name}の実行中にエラーが発生しました: {e}")
+            if name not in self.results["failure"]:
+                self.results["failure"].append(name)
             raise
 
     def create_execution_report(self, mode: str, date: Optional[str] = None):
