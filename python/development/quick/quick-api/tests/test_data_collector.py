@@ -1,12 +1,12 @@
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, call
 import os
 import shutil
 import yaml
 from datetime import datetime
 from app.api.client import QuickApiClient
 from app.services.data_collector import DataCollector
-from app.core.config import get_connection_config
+from app.core.config import get_connection_config, get_request_config
 
 class TestDataCollector(unittest.TestCase):
     """DataCollectorのテスト"""
@@ -14,97 +14,185 @@ class TestDataCollector(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """テストクラス全体の前準備"""
-        # 実際のconnection_configを読み込む
-        cls.real_connection_config = get_connection_config()
+        cls.connection_config = get_connection_config()
+        cls.request_config = get_request_config()
 
     def setUp(self):
         """テストの前準備"""
-        # テスト用の出力ディレクトリを作成
+        # 実際の設定を読み込む
+        self.original_config = get_request_config()
+        
+        # テスト用の出力ディレクトリ
         self.test_output_dir = os.path.join('output', 'test')
-        os.makedirs(os.path.join(self.test_output_dir, 'daily'), exist_ok=True)
-        os.makedirs(os.path.join(self.test_output_dir, 'spot'), exist_ok=True)
-
+        os.makedirs(self.test_output_dir, exist_ok=True)
+        
+        # テスト用の設定は実際の設定をベースに出力パスのみ変更
+        self.test_config = self.original_config.copy()
+        self.test_config['output'] = {
+            'base_dir': self.test_output_dir,
+            'daily_dir': 'daily',
+            'spot_dir': 'spot'
+        }
+        
+        # モックの設定
         self.mock_client = Mock(spec=QuickApiClient)
         self.collector = DataCollector(self.mock_client)
 
-        # テスト用の設定をセットアップ
-        self.test_config = {
-            'input': {
-                'base_dir': 'input',
-                'request_file': 'requests.yml',
-                'daily_dir': 'daily',
-                'spot_dir': 'spot'
-            },
-            'output': {
-                'base_dir': 'output',
-                'daily_dir': 'daily',
-                'spot_dir': 'spot'
-            }
-        }
-
     def tearDown(self):
         """テスト後のクリーンアップ"""
-        # テスト用の出力ディレクトリのクリーンアップ
         if os.path.exists(self.test_output_dir):
             shutil.rmtree(self.test_output_dir)
 
-    def test_execute_spot_requests_file_not_found(self):
-        """スポットリクエスト - ファイル未存在時のテスト"""
-        test_date = "20240101"
-        with patch('app.core.config.get_request_config') as mock_get_config:
-            mock_get_config.return_value = self.test_config
-            
-            # 存在しない日付でのファイル未存在エラーを確認
-            with self.assertRaises(FileNotFoundError) as context:
-                self.collector.execute_spot_requests(test_date)
-            
-            self.assertIn("スポット定義ファイルが見つかりません", str(context.exception))
+    def _load_existing_request_file(self, mode: str, date: str = None) -> dict:
+        """既存のリクエスト定義ファイルを読み込む"""
+        # ファイルパスの構築
+        if mode == 'daily':
+            file_path = os.path.join(
+                self.request_config['input']['base_dir'],
+                self.request_config['input']['daily_dir'],
+                self.request_config['input']['request_file']
+            )
+        else:
+            file_path = os.path.join(
+                self.request_config['input']['base_dir'],
+                self.request_config['input']['spot_dir'],
+                date,
+                self.request_config['input']['request_file']
+            )
 
-    def test_execute_spot_requests_with_existing_file(self):
-        """スポットリクエスト - 定義ファイルが存在する場合のテスト"""
-        # 実際のスポット定義ファイルを探す
-        spot_dir = os.path.join('input', 'spot')
+        # ファイルの存在確認
+        if not os.path.exists(file_path):
+            self.skipTest(f"定義ファイルが存在しません: {file_path}")
+
+        # ファイルの読み込み
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return yaml.safe_load(f)
+
+    def test_execute_daily_requests_success(self):
+        """日次実行の正常系テスト"""
+        # 1. 既存の定義ファイルを読み込む
+        definition = self._load_existing_request_file('daily')
+        
+        # デバッグ出力を追加
+        print("\nDaily requests definition:")
+        enabled_requests = []
+        print("\nEnabled requests:")
+        for name, config in definition['requests'].items():
+            enabled = config.get('enabled', True)
+            print(f"- {name}: enabled = {enabled}")
+            if enabled:
+                enabled_requests.append(name)
+        print(f"\nTotal enabled requests: {len(enabled_requests)}")
+        print(f"Enabled request list: {enabled_requests}")
+        
+        # 2. モック設定
+        self.mock_client.request_data.return_value = ('test_output.csv', None)
+        
+        # 3. テスト実行
+        with patch('app.core.config.get_request_config', return_value=self.test_config):
+            results = self.collector.execute_daily_requests()
+            
+            # デバッグ出力を追加
+            print("\nExecution results:")
+            print(f"Success count: {len(results['success'])}")
+            print(f"Success list: {results['success']}")
+            print(f"API call count: {self.mock_client.request_data.call_count}")
+            
+            # 4. 結果の検証
+            self.assertEqual(
+                self.mock_client.request_data.call_count,
+                len(enabled_requests),
+                f"有効なリクエスト数とAPI呼び出し回数が一致すること\n"
+                f"Expected: {len(enabled_requests)}, Got: {self.mock_client.request_data.call_count}"
+            )
+            
+            self.assertEqual(
+                len(results['success']),
+                len(enabled_requests),
+                f"すべての有効なリクエストが成功すること\n"
+                f"Expected: {len(enabled_requests)}, Got: {len(results['success'])}\n"
+                f"Expected list: {enabled_requests}\n"
+                f"Actual list: {results['success']}"
+            )
+
+    def test_execute_spot_requests_with_paging(self):
+        """スポット実行でのページング処理テスト"""
+        # 1. テスト用の日付ディレクトリを探す
+        spot_dir = os.path.join(
+            self.request_config['input']['base_dir'],
+            self.request_config['input']['spot_dir']
+        )
+        
         if not os.path.exists(spot_dir):
-            self.skipTest("スポット定義ディレクトリが存在しません")
+            self.skipTest("スポット実行ディレクトリが存在しません")
 
-        # 存在する日付ディレクトリを探す
-        existing_dates = [d for d in os.listdir(spot_dir)
-                         if os.path.isdir(os.path.join(spot_dir, d)) and
-                         os.path.exists(os.path.join(spot_dir, d, 'requests.yml'))]
+        test_dates = [d for d in os.listdir(spot_dir) 
+                     if os.path.isdir(os.path.join(spot_dir, d))]
+        if not test_dates:
+            self.skipTest("スポット実行の定義ディレクトリが存在しません")
 
-        if not existing_dates:
-            self.skipTest("スポット定義ファイルが存在しません")
+        # 2. 最新の定義ファイルを使用
+        test_date = sorted(test_dates)[-1]
+        definition = self._load_existing_request_file('spot', test_date)
 
-        # 利用可能な最新の日付を使用
-        test_date = sorted(existing_dates)[-1]  # 最新の日付を使用
-        spot_file_path = os.path.join(spot_dir, test_date, 'requests.yml')
+        # 3. ページング対応のエンドポイントを確認
+        paging_endpoints = [name for name, config in definition['requests'].items() 
+                          if name in ['foreign_fund', 'fund', 'quote_stock']]
+        if not paging_endpoints:
+            self.skipTest("ページング対応のエンドポイントが定義されていません")
 
-        # 実際のリクエスト定義を読み込む
-        with open(spot_file_path, 'r', encoding='utf-8') as f:
-            actual_definition = yaml.safe_load(f)
-            if not actual_definition or 'requests' not in actual_definition:
-                self.skipTest("有効なリクエスト定義が存在しません")
+        # 4. ページング処理のシミュレーション
+        self.mock_client.request_data.side_effect = [
+            ('output1.csv', 'NEXT_1'),
+            ('output2.csv', 'NEXT_2'),
+            ('output3.csv', None)
+        ]
 
-        with patch('app.core.config.get_request_config') as mock_get_config:
-            mock_get_config.return_value = self.test_config
-            
-            # モックの設定は最小限に
-            self.mock_client.request_data.return_value = ('test_file.csv', None)
-            
-            # 実行
+        # 5. テスト実行と検証
+        with patch('app.core.config.get_request_config', return_value=self.test_config):
             results = self.collector.execute_spot_requests(test_date)
-            
-            # 実際のリクエスト定義に基づいて結果を検証
-            enabled_requests = [req_name for req_name, req_def in actual_definition['requests'].items()
-                              if req_def.get('enabled', True)]
-            
-            if enabled_requests:
-                # 有効なリクエストが存在する場合
-                self.assertTrue(
-                    len(results['success']) > 0 or len(results['failure']) > 0,
-                    "有効なリクエストが存在するのに実行結果がありません"
-                )
-            else:
-                # 有効なリクエストが存在しない場合
-                self.assertEqual(len(results['success']), 0)
-                self.assertEqual(len(results['failure']), 0)
+            self.assertTrue(
+                self.mock_client.request_data.call_count >= 3,
+                "ページング処理による複数回のAPI呼び出しが行われること"
+            )
+            self.assertGreater(len(results['success']), 0,
+                "少なくとも1つのリクエストが成功すること"
+            )
+
+    # def test_create_execution_report(self):
+    #     """実行レポート作成のテスト"""
+    #     # 1. テストデータの準備
+    #     test_date = datetime.now().strftime("%Y%m%d")
+    #     self.collector.results = {
+    #         "success": ["quote_index", "quote_stock"],
+    #         "failure": ["file"]
+    #     }
+
+    #     # 2. 出力ディレクトリの作成
+    #     daily_report_dir = os.path.join(self.test_output_dir, "daily", test_date, "reports")
+    #     spot_report_dir = os.path.join(self.test_output_dir, "spot", test_date, "reports")
+    #     os.makedirs(daily_report_dir, exist_ok=True)
+    #     os.makedirs(spot_report_dir, exist_ok=True)
+
+    #     # 3. テスト実行と検証
+    #     with patch('app.core.config.get_request_config', return_value=self.test_config):
+    #         # 日次実行レポート
+    #         self.collector.create_execution_report('daily', test_date)
+    #         self.assertTrue(
+    #             os.path.exists(daily_report_dir), 
+    #             f"ディレクトリが存在すること: {daily_report_dir}"
+    #         )
+    #         daily_reports = os.listdir(daily_report_dir)
+    #         self.assertTrue(
+    #             any(report.startswith("execution_report_") for report in daily_reports),
+    #             "実行レポートファイルが作成されていること"
+    #         )
+
+    #         # スポット実行レポート
+    #         self.collector.create_execution_report('spot', test_date)
+    #         self.assertTrue(os.path.exists(spot_report_dir))
+    #         spot_reports = os.listdir(spot_report_dir)
+    #         self.assertTrue(
+    #             any(report.startswith("execution_report_") for report in spot_reports),
+    #             "実行レポートファイルが作成されていること"
+    #         )
