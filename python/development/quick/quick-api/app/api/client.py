@@ -38,6 +38,13 @@ class QuickApiClient:
             if min_date and date < min_date:
                 raise ValueError(f"指定された日付が不正です。file APIでは{min_date}以降の日付を指定してください。")
 
+    def _validate_date_range(self, endpoint: str, date_from: str, date_to: str) -> None:
+        """期間指定の日付パラメータをバリデーション"""
+        self._validate_date(endpoint, date_from)
+        self._validate_date(endpoint, date_to)
+        if date_from > date_to:
+            raise ValueError("開始日が終了日よりも後の日付になっています")        
+
     def _validate_universe(self, endpoint: str, universe: Optional[str]) -> None:
         """ユニバースパラメータのバリデーション"""
         if endpoint == 'quote_foreign_stock':
@@ -152,27 +159,37 @@ class QuickApiClient:
         Args:
             endpoint (str): エンドポイント名
             output_path (str): 出力ファイルパス
-            date (Optional[str]): 取得日（YYYYMMDD形式）
-            date_from (Optional[str]): 開始日（YYYYMMDD形式）
-            date_to (Optional[str]): 終了日（YYYYMMDD形式）
+            date (Optional[str]): 取得日（YYYYMMDD形式）- fileエンドポイントのみ
+            date_from (Optional[str]): 開始日（YYYYMMDD形式）- fileエンドポイントのみ
+            date_to (Optional[str]): 終了日（YYYYMMDD形式）- fileエンドポイントのみ
             universe (Optional[str]): ユニバース指定
             universe_next (Optional[str]): 続きのデータ取得用識別子
         Returns:
             Tuple[str, Optional[str]]: (保存したファイルパス, 次のuniverse_next)
         """
         # パラメータのバリデーション
-        if date:
-            self._validate_date(endpoint, date)
+        if endpoint == 'file':
+            if date and (date_from or date_to):
+                raise ValueError("dateとdate_range（date_from/date_to）は同時に指定できません")
+            if date:
+                self._validate_date(endpoint, date)
+            if date_from and date_to:
+                self._validate_date_range(endpoint, date_from, date_to)
+        elif any([date, date_from, date_to]):
+            raise ValueError(f"日付パラメータは{endpoint}では使用できません。fileエンドポイントのみで使用可能です。")
+
         if universe is not None:
             self._validate_universe(endpoint, universe)
 
+        # パラメータの構築
         params = {}
-        if date:
-            params['date'] = date
-        if date_from:
-            params['date_from'] = date_from
-        if date_to:
-            params['date_to'] = date_to
+        if endpoint == 'file':
+            if date:
+                params['date'] = date
+            if date_from:
+                params['date_from'] = date_from
+            if date_to:
+                params['date_to'] = date_to
         if universe:
             params['universe'] = universe
         if universe_next:
