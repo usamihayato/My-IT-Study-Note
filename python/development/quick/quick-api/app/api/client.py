@@ -13,35 +13,22 @@ class QuickApiClient:
     """Quick API クライアント"""
 
     # 有効なレスポンス形式
-    ResponseFormat = Literal["csv", "json", "tsv"]
     VALID_FORMATS = ["csv", "json", "tsv"]
 
-    def __init__(self, output_dir: str = None, response_format: VALID_FORMATS = None):
+    def __init__(self):
         """
         クライアントの初期化
-
-        Args:
-            output_dir (str, optional): ファイルの保存先ディレクトリ
-            response_format (str, optional): レスポンス形式（"csv", "json", "tsv"）
         """
         self.config = get_connection_config()
         self.base_url = self.config['api']['base_url'].rstrip('/')
         self.access_key = self.config['api']['access_key']
         self.retry_config = self.config['retry']
-        self.output_dir = output_dir or self.config.get('output_dir', 'output/data')
         self.endpoints = self.config['endpoints']
         self.universes = self.config.get('universes', {})
-        self.format = response_format or self.config['api'].get('format', 'csv')
+        self.format = self.config['api'].get('format', 'csv')
         
-        self._validate_format(self.format)
         self._init_proxy_settings()
-        self._ensure_output_dir()
         logger.info(f"QuickApiClientを初期化しました（レスポンス形式: {self.format}）")
-
-    def _validate_format(self, format_type: str) -> None:
-        """レスポンス形式の検証"""
-        if format_type not in self.VALID_FORMATS:
-            raise ValueError(f"無効なレスポンス形式です: {format_type}")
 
     def _init_proxy_settings(self) -> None:
         """プロキシ設定の初期化"""
@@ -55,12 +42,6 @@ class QuickApiClient:
             logger.info("プロキシ設定を適用しました")
         else:
             logger.info("プロキシは使用しません")
-
-    def _ensure_output_dir(self) -> None:
-        """出力ディレクトリの存在確認と作成"""
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
-            logger.info(f"出力ディレクトリを作成しました: {self.output_dir}")
 
     def _create_request(self, url: str) -> urllib.request.Request:
         """リクエストオブジェクトを作成"""
@@ -85,6 +66,8 @@ class QuickApiClient:
 
     def _save_data(self, data: str, filepath: str) -> str:
         """データをファイルに保存する"""
+        # 出力ディレクトリの作成はDataCollectorで管理されるため、
+        # ここでは単純にファイルの保存のみを行う
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(data)
@@ -96,19 +79,14 @@ class QuickApiClient:
         endpoint: str,
         output_path: str,
         params: Dict[str, str] = None,
-        format_type: Optional[str] = None
     ) -> Tuple[str, Optional[str]]:
         """APIリクエストを実行する"""
         # エンドポイントの存在確認
         if endpoint not in self.endpoints:
             raise ValueError(f"未定義のエンドポイント: {endpoint}")
 
-        # フォーマット指定の処理
-        current_format = format_type or self.format
-        self._validate_format(current_format)
-
         # URLの構築
-        url = f"{self.base_url}/{self.endpoints[endpoint]['path']}.{current_format}"
+        url = f"{self.base_url}/{self.endpoints[endpoint]['path']}.{self.format}"
         if params:
             query_string = "&".join(f"{k}={v}" for k, v in params.items() if v is not None)
             url = f"{url}?{query_string}"
@@ -150,19 +128,17 @@ class QuickApiClient:
         date_to: Optional[str] = None,
         universe: Optional[str] = None,
         universe_next: Optional[str] = None,
-        format_type: Optional[str] = None
     ) -> Tuple[str, Optional[str]]:
         """
         データを取得してファイルに保存する
         Args:
             endpoint (str): エンドポイント名
-            output_path (str): 出力ファイルパス
+            output_path (str): 出力ファイルパス（DataCollectorで管理）
             date (Optional[str]): 取得日（YYYYMMDD形式）
             date_from (Optional[str]): 開始日（YYYYMMDD形式）
             date_to (Optional[str]): 終了日（YYYYMMDD形式）
             universe (Optional[str]): ユニバース指定
             universe_next (Optional[str]): 続きのデータ取得用識別子
-            format_type (Optional[str]): レスポンス形式の一時的な指定
         Returns:
             Tuple[str, Optional[str]]: (保存したファイルパス, 次のuniverse_next)
         """
@@ -178,4 +154,4 @@ class QuickApiClient:
         if universe_next:
             params['universe_next'] = universe_next
 
-        return self._request(endpoint, output_path, params, format_type)
+        return self._request(endpoint, output_path, params)
