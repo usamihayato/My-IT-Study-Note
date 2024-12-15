@@ -34,6 +34,12 @@ class DataCollector:
         """日次データ収集を実行"""
         logger.info("日次データ収集を開始します")
         
+        # 結果を初期化
+        self.results = {
+            "success": [],
+            "failure": []
+        }
+        
         execution_date = datetime.now().strftime("%Y%m%d")
         daily_def_path = get_input_path('daily')
         if not os.path.exists(daily_def_path):
@@ -53,11 +59,12 @@ class DataCollector:
             logger.info(f"{config['description']}を開始します")
             try:
                 self._execute_request(name, config, base_dir)
+                if name not in self.results["success"]:
+                    self.results["success"].append(name)
             except Exception as e:
                 logger.error(f"{name}の取得に失敗しました: {e}")
-                self.results["failure"].append(name)
-            else:
-                self.results["success"].append(name)
+                if name not in self.results["failure"]:
+                    self.results["failure"].append(name)
 
         return self.results
 
