@@ -1,11 +1,43 @@
+###################################
+# 日次実行用 requests.yml サンプル
+###################################
 # 日次データ取得定義
 requests:
-  # 指標データ
+  # 各種指標データ（パラメータなし）
   quote_index:
     enabled: true
     description: "各種指標・直近データ"
-  
-  # 国内投信データ
+    
+  # 国内株データ（ページング対応）
+  quote_stock:
+    enabled: true
+    description: "国内株・直近データ"
+    
+  # 海外株データ（市場指定必須）
+  quote_foreign_stock:
+    enabled: true
+    description: "海外株・直近データ"
+    markets:  # 取得対象の市場を指定
+      - usa_stock   # 北米株
+      - lse_stock   # 英国株
+      - hk_stock    # 香港株
+    
+  # 国内投信データ（ページング対応）
+  fund:
+    enabled: true
+    description: "国内投信・基本データ"
+    
+  fund2:
+    enabled: true
+    description: "国内投信・手数料データ"
+    
+  # 外国投信データ（ページング対応）
   foreign_fund:
     enabled: true
     description: "外国投信・直近データ"
+    
+  # 経済統計データ（直近データ取得）
+  file:
+    enabled: true
+    description: "経済統計データ（直近）"
+    # 日次実行では日付指定なし -> 直近データを取得

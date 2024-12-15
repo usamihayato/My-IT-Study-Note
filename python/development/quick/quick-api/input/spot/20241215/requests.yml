@@ -1,0 +1,55 @@
+###################################
+# スポット実行用 requests.yml サンプル
+###################################
+metadata:
+  description: "マスタデータとスポットデータの取得"
+  created_by: "user001"
+  created_at: "2024-12-15"
+
+requests:
+  # 国内投信マスタ（ページング対応）
+  fund_historical:
+    description: "国内投信マスタデータ取得"
+    
+  # 外国投信マスタ（ページング対応）
+  foreign_fund_historical:
+    description: "外国投信マスタデータ取得"
+       
+  # 海外株の市場別データ取得
+  quote_foreign_stock:
+    description: "海外株データ取得"
+    markets:
+      # アジア市場
+      - hk_stock    # 香港
+      - ko_stock    # 韓国
+      - kl_stock    # マレーシア
+      - jk_stock    # インドネシア
+      - tl_stock    # タイ
+      - hd_stock    # 上海B株
+      - aui_stock   # オーストラリア
+      
+      # 欧州市場
+      - lse_stock   # LSE（英国）
+      - xetra_stock # クセトラ（ドイツ）
+      - z_stock     # チューリッヒ（スイス）
+      - paris_stock # ユーロネクストパリ（フランス）
+      - ome_stock   # ストックホルム（スウェーデン）
+      - am_stock    # アムステルダム（オランダ）
+      - mil_stock   # ミラノ（イタリア）
+      - hel_stock   # ヘルシンキ（フィンランド）
+      - bdm_stock   # マドリード（スペイン）
+      
+      # 北米市場
+      - usa_stock   # 北米
+      - c_stock     # トロント（カナダ）
+
+  # 経済統計データの特定日取得
+  file:
+    description: "経済統計データ取得"
+    date: "20240410"  # 20240410以降の日付のみ指定可能
+
+  file:
+    description: "経済統計データ取得（期間指定）"
+    date_range:
+      start_date: "20240411"  # 20240410以降の日付のみ指定可能
+      end_date: "20240412"    # 20240410以降の日付のみ指定可能
