@@ -24,48 +24,59 @@ proxies:
   host: "proxy.example.com"
   port: 8080
 
-# エンドポイント定義
+# エンドポイント定義（インターフェース仕様に基づく）
 endpoints:
-  economic_statistics:
+  file:
     path: "file"
     description: "経済統計データ"
-    use_date: true
+    use_date: true  # date パラメータをサポート
+    date_format: "yyyymmdd"
+    min_date: "20240410"  # 指定可能な最小日付
+
   foreign_fund:
     path: "foreign_fund"
     description: "外国投信・直近データ"
-    use_universe_next: true
+    use_universe_next: true  # ページング対応
+
   foreign_fund_historical:
     path: "foreign_fund_historical"
     description: "投信・過去データ（本数）"
     use_universe_next: true
-  domestic_fund:
+
+  fund:
     path: "fund"
     description: "国内投信・直近データ"
     use_universe_next: true
-  domestic_fund2:
+
+  fund2:
     path: "fund2"
     description: "国内投信・直近データ2"
     use_universe_next: true
-  domestic_fund_historical:
+
+  fund_historical:
     path: "fund_historical"
     description: "投信・過去データ（本数）"
     use_universe_next: true
-  foreign_stock:
+
+  quote_foreign_stock:
     path: "quote_foreign_stock"
     description: "直近データ（海外株）"
     use_universe: true
     use_universe_next: true
+
   quote_index:
     path: "quote_index"
     description: "直近データ（各種指標）"
-  domestic_stock:
+    # パラメータなし
+
+  quote_stock:
     path: "quote_stock"
     description: "直近データ（国内株）"
     use_universe_next: true
 
-# ユニバース定義
+# ユニバース定義（海外株式市場向け）
 universes:
-  foreign:  # 海外株式市場
+  foreign:
     hk_stock: "香港株銘柄"
     ko_stock: "韓国株銘柄"
     kl_stock: "マレーシア株銘柄"
