@@ -116,7 +116,81 @@ api:
   format: "csv"  # レスポンス形式（csv, json, tsv）
 ```
 
-### リクエスト定義
+### リクエスト定義ファイルの作成・管理手順
+
+#### 1. リクエストファイルの基本
+##### 1.1 ファイルの種類と配置場所
+- 日次実行用: `input/daily/requests.yml`
+- スポット実行用: `input/spot/YYYYMMDD/requests.yml`
+
+##### 1.2 基本構造
+```yaml
+metadata:              # スポット実行時のみ必要
+  description: "実行内容の説明"
+  created_by: "作成者名"
+  created_at: "作成日"
+
+requests:
+  エンドポイント名:
+    enabled: true      # 実行有無のフラグ
+    description: "処理の説明"
+    # 以下、必要なパラメータを設定
+```
+#### 2. 各エンドポイントの設定方法
+
+##### 2.1 経済統計データ（file）
+```yaml
+# 日次実行用（直近データ取得）
+file:
+  enabled: true
+  description: "経済統計データ（直近）"
+  # 日付指定なし -> 直近データを取得
+
+# スポット実行用（特定日）
+file:
+  description: "経済統計データ"
+  date: "20240410"  # 20240410以降の日付のみ指定可能
+
+# スポット実行用（期間指定）
+file:
+  description: "経済統計データ（期間指定）"
+  date_range:
+    start_date: "20240410"
+    end_date: "20240415"
+```
+##### 2.2 海外株データ（quote_foreign_stock）
+```yaml
+quote_foreign_stock:
+  description: "海外株データ取得"
+  markets:
+    - usa_stock   # 北米株
+    - lse_stock   # LSE（英国）株
+    - hk_stock    # 香港株
+```
+
+##### 2.3 その他のエンドポイント
+```yaml
+# 各種指標データ
+quote_index:
+  enabled: true
+  description: "各種指標・直近データ"
+
+# 国内株データ
+quote_stock:
+  enabled: true
+  description: "国内株・直近データ"
+
+# 国内投信データ
+fund:
+  enabled: true
+  description: "国内投信・基本データ"
+
+# 外国投信データ
+foreign_fund:
+  enabled: true
+  description: "外国投信・直近データ"
+```
+
 
 #### 日次実行（input/daily/requests.yml）
 以下のフォーマットで日次で取得するデータを定義します：
@@ -143,6 +217,52 @@ requests:
       - hk_stock    # 香港株
       - lse_stock   # ロンドン株
 ```
+
+#### 3. メンテナンス手順
+
+##### 3.1 日次実行定義のメンテナンス
+1. 定期的な見直し項目
+   - enabled フラグの確認
+   - 不要なエンドポイントの削除
+   - 新規追加が必要なエンドポイントの追加
+     → connection_config.yml の 定義を先に確認
+
+2. チェックポイント
+   - fileエンドポイントには日付指定がないことを確認
+   - markets指定の内容が最新であることを確認
+   - description の内容が実態と合っているか確認
+
+##### 3.2 スポット実行定義の管理
+1. ファイル配置
+   - 日付ディレクトリの作成: `input/spot/YYYYMMDD/`
+   - requests.yml の配置
+   - 実行後の整理（必要に応じてアーカイブ）
+
+2. 作成時の注意点
+   - metadata セクションの必須入力
+   - file エンドポイントの日付指定（20240410以降）
+   - markets 指定時の市場コード確認
+
+#### 4. その他
+
+
+1. 命名規則
+   - ファイル名は小文字のみ使用
+   - 日付は必ずYYYYMMDD形式
+   - description は具体的な内容を記載
+
+2. コメント
+   - 各セクションの目的を記載
+   - 特殊な設定がある場合は理由を記載
+   - 一時的な変更は期間を明記
+
+3. 実行エラー時は？
+   - レート制限エラー
+     → 時間をおいて再実行
+   - データ取得エラー
+     → ログを確認し、必要に応じて再実行
+   - 契約状況
+     → file エンドポイントは現在利用不可？  
 
 ## 使用方法
 
