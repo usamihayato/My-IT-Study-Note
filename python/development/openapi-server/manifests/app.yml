@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aks-api-server
+  namespace: openapi-server
+spec:
+  strategy: 
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: aks-api-server
+  template:
+    metadata:
+      labels:
+        app: aks-api-server
+    spec:
+      serviceAccountName: aks-api-server-account
+      securityContext:
+        runAsUser: 1000 # 既存ユーザーdmadminのIDに揃える
+        runAsGroup: 1000 # 既存ユーザーdmadminのIDに揃える
+        runAsNonRoot: true
+      containers:
+      - name: aks-api-server
+        image: acrprivatepocje001.azurecr.io/aks-api-server:v2.4.6
+        imagePullPolicy: Always
+        env:
+        - name: API_SPECIFICATION_DIR
+          value: "./spec"
+        - name: SPECS
+          value: "[api.v1]"
+        - name: ENABLE_DEBUGGER
+          value: "false"
+        - name: ENABLE_SWAGGER_UI
+          value: "true"
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aks-api-server-svc
+  namespace: openapi-server
+spec:
+  selector:
+    app: aks-api-server
+  ports:
+  - port: 8000
+    targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aks-api-server-ingress
+  namespace: openapi-server
+  labels:
+    name: aks-api-server-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /api/exa/v1/$1$2
+spec:
+  ingressClassName: nginx-mgm
+  rules:
+  - http:
+      paths:
+      - pathType: Prefix
+        path: "/(health)"
+        backend:
+          service:
+            name: aks-api-server-svc
+            port: 
+              number: 8000
+      - pathType: Prefix
+        path: "/(generate_job)"
+        backend:
+          service:
+            name: aks-api-server-svc
+            port:
+              number: 8000
+      - pathType: Prefix
+        path: "/(generate_job_val)"
+        backend:
+          service:
+            name: aks-api-server-svc
+            port:
+              number: 8000
+      - pathType: Prefix
+        path: "/(job_status)"
+        backend:
+          service:
+            name: aks-api-server-svc
+            port:
+              number: 8000
+      - pathType: Prefix
+        path: "/(ui)(.*)"
+        backend:
+          service:
+            name: aks-api-server-svc
+            port: 
+              number: 8000

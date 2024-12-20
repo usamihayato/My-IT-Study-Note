@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  namespace: openapi-app
+  name: azurefilesbatchinput
+spec:
+  storageClassName: "batchinput"
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  azureFile:
+    secretName: azure-secret
+    secretNamespace: openapi-app
+    shareName: retaildx-input
+    readOnly: false
+  mountOptions:
+  - dir_mode=0777
+  - file_mode=0777
+  - uid=root
+  - gid=root
+  - mfsymlinks
+  - nobrl
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  namespace: openapi-app
+  name: azurefilesbatchoutputval
+spec:
+  storageClassName: "batchoutputval"
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  azureFile:
+    secretName: azure-secret
+    secretNamespace: openapi-app
+    shareName: retaildx-output-val
+    readOnly: false
+  mountOptions:
+  - dir_mode=0777
+  - file_mode=0777
+  - uid=root
+  - gid=root
+  - mfsymlinks
+  - nobrl
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: openapi-app
+  name: azurefilesinputclaim
+spec:
+  accessModes:
+  - ReadWriteMany
+  storageClassName: "batchinput"
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: openapi-app
+  name: azurefilesoutputvalclaim
+spec:
+  accessModes:
+  - ReadWriteMany
+  storageClassName: "batchoutputval"
+  resources:
+    requests:
+      storage: 5Gi
