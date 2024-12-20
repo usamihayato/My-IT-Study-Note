@@ -1,12 +1,25 @@
 ARG registry=acrprivatepocje001
-ARG base_tag=v2.4.6
+# ACRのプライベートPythonイメージを使用
+FROM ${registry}.azurecr.io/base/python:3.8-slim-bullseye
 
-FROM  ${registry}.azurecr.io/openapi/aks-env-base:${base_tag}
-
-USER dmadmin
+# 非rootユーザーの作成
+RUN useradd -m -u 1000 dmadmin
 
 WORKDIR /usr/src/app
-COPY --chown=dmadmin:dmadmin src/app/ .
-ENV PYTHONPATH "${PYTHONPATH}:/usr/src/app"
 
+# アプリケーションコードのコピー
+COPY --chown=dmadmin:dmadmin src/app/ .
+COPY --chown=dmadmin:dmadmin src/lib/ ./lib/
+
+# requirements.txtがある場合のみコピーしてインストール
+COPY --chown=dmadmin:dmadmin requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 非rootユーザーに切り替え
+USER dmadmin
+
+# 環境変数の設定
+ENV PYTHONPATH="/usr/src/app:${PYTHONPATH}"
+
+# uWSGIの起動
 CMD ["uwsgi", "--ini", "./uwsgi.ini"]
