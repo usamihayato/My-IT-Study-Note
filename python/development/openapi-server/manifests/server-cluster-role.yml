@@ -1,15 +1,20 @@
+# server-cluster-role.yml
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: aks-api-server-role
 rules:
-- apiGroups: ["*"]
-  resources: ["*"]
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
+# Job関連の権限
+- apiGroups: ["batch"]
+  resources: ["jobs", "jobs/status"]
+  verbs: ["create", "get", "list", "delete", "patch"]
+
+# PVC関連の権限（ストレージマウント用）
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["get", "list"]
+
+# Namespace関連の権限（Job作成時のnamespace確認用）
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list"]
